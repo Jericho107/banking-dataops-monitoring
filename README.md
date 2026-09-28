@@ -255,6 +255,10 @@ What is intentionally demonstrated:
 - CI;
 - operational documentation.
 
+Known technical limitation:
+
+- reconciliation currently validates transaction identity and `amount_chf`, not byte-for-byte equality of every transaction attribute; a production extension could compare canonical row hashes or field-level contracts.
+
 What is intentionally not claimed:
 
 - production scale;
