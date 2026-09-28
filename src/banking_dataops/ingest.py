@@ -35,7 +35,6 @@ def _load_csv(table_name: str, csv_path: Path, settings: Settings | None = None)
     ):
         for line in file:
             copy.write(line)
-        connection.commit()
 
     return row_count
 
