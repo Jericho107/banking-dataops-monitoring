@@ -32,10 +32,9 @@ def execute_sql_file(path: Path, settings: Settings | None = None) -> None:
     """Execute all statements from a SQL file inside one transaction."""
 
     statements = split_sql_statements(path.read_text(encoding="utf-8"))
-    with connect(settings) as connection:
-        with connection.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
+    with connect(settings) as connection, connection.cursor() as cursor:
+        for statement in statements:
+            cursor.execute(statement)
         connection.commit()
 
 
@@ -56,18 +55,19 @@ def fetch_dataframe(query: str, settings: Settings | None = None) -> pd.DataFram
 def fetch_rows(query: str, settings: Settings | None = None) -> list[dict[str, object]]:
     """Return SQL rows as dictionaries."""
 
-    with psycopg.connect((settings or load_settings()).dsn, row_factory=dict_row) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(query)
-            return list(cursor.fetchall())
+    with (
+        psycopg.connect((settings or load_settings()).dsn, row_factory=dict_row) as connection,
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(query)
+        return list(cursor.fetchall())
 
 
 def execute_query(query: str, settings: Settings | None = None) -> None:
     """Execute one SQL query."""
 
-    with connect(settings) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(query)
+    with connect(settings) as connection, connection.cursor() as cursor:
+        cursor.execute(query)
         connection.commit()
 
 
