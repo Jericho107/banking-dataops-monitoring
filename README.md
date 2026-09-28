@@ -74,10 +74,10 @@ That is the reverse test for the central claim.
 |---|---|---|
 | Source-to-target reconciliation is real | `reconciliation.py` compares source CSV with PostgreSQL | CI alters one target amount and expects a non-zero exit |
 | Data-quality controls are executable | SQL-backed controls + Python runner | control result logic is unit-tested |
-| The pipeline is reproducible | generator + ingestion + Docker + Makefile | CI rebuilds the flow from deterministic synthetic data |
+| The pipeline is reproducible | generator + ingestion + Docker + Makefile | CI rebuilds the flow from seeded synthetic data |
 | Failures are visible | persisted reconciliation status + Streamlit | corrupted target produces FAIL evidence |
 | Software quality is enforced | `pytest` + `ruff` + compile step | every push and PR runs validation |
-| Public data is safe to inspect | deterministic synthetic generator | repository policy excludes real operational data |
+| Public data is safe to inspect | seeded synthetic generator | repository policy excludes real operational data |
 
 Full mapping: [docs/proof_matrix.md](docs/proof_matrix.md).
 
@@ -87,7 +87,7 @@ Full mapping: [docs/proof_matrix.md](docs/proof_matrix.md).
 
 ```mermaid
 flowchart LR
-    A[Deterministic synthetic source] --> B[CSV source files]
+    A[Seeded synthetic source] --> B[CSV source files]
     B --> C[PostgreSQL ingestion]
     C --> D[(PostgreSQL target)]
 
