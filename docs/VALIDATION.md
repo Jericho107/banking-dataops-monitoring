@@ -77,7 +77,7 @@ Expected reconciliation status: `PASS`.
 - compile;
 - Ruff;
 - pytest;
-- deterministic source generation;
+- seeded source generation;
 - PostgreSQL ingestion;
 - data-quality controls;
 - clean reconciliation;
