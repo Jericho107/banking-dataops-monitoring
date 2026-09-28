@@ -203,6 +203,12 @@ def run_quality_checks(settings: Settings | None = None) -> list[QualityCheckRes
     return results
 
 
+def has_blocking_failures(results: list[QualityCheckResult]) -> bool:
+    """Return whether any quality control has failed."""
+
+    return any(result.status == "FAIL" for result in results)
+
+
 def print_quality_results(results: list[QualityCheckResult]) -> None:
     """Print a CLI-friendly quality summary."""
 
@@ -214,9 +220,12 @@ def print_quality_results(results: list[QualityCheckResult]) -> None:
 
 
 def main() -> None:
-    """CLI entry point."""
+    """CLI entry point that fails closed when a control fails."""
 
-    print_quality_results(run_quality_checks())
+    results = run_quality_checks()
+    print_quality_results(results)
+    if has_blocking_failures(results):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
