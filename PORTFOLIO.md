@@ -67,7 +67,7 @@ This converts the core claim from documentation into executable evidence.
 ## What this demonstrates
 
 - relational modelling;
-- deterministic test-data generation;
+- seeded test-data generation with explicit reproducibility controls;
 - PostgreSQL ingestion;
 - SQL and Python control design;
 - source-to-target reconciliation;
