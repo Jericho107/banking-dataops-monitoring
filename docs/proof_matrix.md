@@ -4,7 +4,7 @@ This document maps the repository's public claims to inspectable evidence and a 
 
 | Claim | Primary evidence | Reverse test / falsification path |
 |---|---|---|
-| The source is reproducible | `generate_synthetic_data.py` with explicit seed | run twice with the same parameters and compare generated control totals |
+| The source is reproducible | `generate_synthetic_data.py` with explicit seed + anchor | run twice with the same seed + anchor and require byte-identical CSV files |
 | PostgreSQL is a distinct target state | `ingest.py` loads CSV files through PostgreSQL COPY | alter target data after ingestion without touching the source file |
 | Data-quality controls execute | `quality_checks.py` + `sql/02_data_quality_checks.sql` | insert/alter rows that violate a documented rule |
 | Reconciliation compares source and target | `load_source_snapshot` vs `load_target_snapshot` | mutate target amount while keeping source CSV unchanged |
