@@ -13,7 +13,7 @@ This document maps the repository's public claims to inspectable evidence and a 
 | Silent amount mutation is detected | per-ID amount comparison | add CHF 1.00 to one existing target transaction |
 | Duplicate source IDs are detectable | source snapshot duplicate detection | duplicate one source row before ingestion |
 | Reconciliation can gate automation | CLI exits non-zero on FAIL | CI expects the mutated target run to fail |
-| Clean state can be recovered | deterministic source + repeatable ingestion | reload source and require PASS after failure injection |
+| Clean state can be recovered | seeded source + repeatable ingestion | reload source and require PASS after failure injection |
 | Software checks are automated | `.github/workflows/ci.yml` | push/PR triggers compile, Ruff, pytest and pipeline validation |
 | Public data are safe to inspect | synthetic generator + repository boundary docs | no real client or banking data are required to reproduce the project |
 
