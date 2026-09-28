@@ -1,7 +1,7 @@
-"""Synthetic regulated-data generator.
+"""Seeded synthetic regulated-data generator.
 
-The generated data is fake and safe for public GitHub. It is designed to test
-SQL quality checks, reconciliation queries and monitoring dashboards.
+The generated data is fake and safe for public GitHub. Supplying the same
+seed and anchor timestamp produces byte-for-byte equivalent CSV content.
 """
 
 from __future__ import annotations
@@ -22,22 +22,46 @@ class SyntheticConfig:
     accounts_per_customer: int = 2
     transactions: int = 1500
     seed: int = 42
+    anchor_time: datetime | None = None
 
 
 def _write_csv(path: Path, rows: list[dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         raise ValueError(f"No rows to write for {path}")
+
     with path.open("w", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=list(rows[0].keys()))
         writer.writeheader()
         writer.writerows(rows)
 
 
+def _normalized_anchor(anchor_time: datetime | None) -> datetime:
+    """Return an aware UTC anchor, defaulting to the current UTC time."""
+
+    if anchor_time is None:
+        return datetime.now(UTC)
+    if anchor_time.tzinfo is None:
+        raise ValueError("anchor_time must include timezone information")
+    return anchor_time.astimezone(UTC)
+
+
+def parse_anchor(value: str) -> datetime:
+    """Parse an ISO-8601 timestamp into an aware UTC datetime."""
+
+    normalized = value.replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(normalized)
+    if parsed.tzinfo is None:
+        raise argparse.ArgumentTypeError("anchor must include a timezone offset or Z")
+    return parsed.astimezone(UTC)
+
+
 def generate(config: SyntheticConfig, output_dir: Path) -> None:
     """Generate synthetic customers, accounts and transactions CSV files."""
 
     rng = random.Random(config.seed)
+    anchor = _normalized_anchor(config.anchor_time)
+
     customer_segments = ["retail", "premium", "sme"]
     countries = ["CH", "FR", "DE", "IT", "AT"]
     channels = ["web", "mobile", "branch", "api"]
@@ -46,7 +70,7 @@ def generate(config: SyntheticConfig, output_dir: Path) -> None:
 
     customers: list[dict[str, object]] = []
     accounts: list[dict[str, object]] = []
-    created_anchor = datetime.now(UTC) - timedelta(days=120)
+    created_anchor = anchor - timedelta(days=120)
 
     for index in range(config.customers):
         customer_id = f"CUST-{index + 1:05d}"
@@ -59,6 +83,7 @@ def generate(config: SyntheticConfig, output_dir: Path) -> None:
                 "created_at": customer_created.isoformat(),
             }
         )
+
         for account_index in range(config.accounts_per_customer):
             accounts.append(
                 {
@@ -66,19 +91,20 @@ def generate(config: SyntheticConfig, output_dir: Path) -> None:
                     "customer_id": customer_id,
                     "account_type": rng.choice(["current", "savings"]),
                     "currency": "CHF",
-                    "opened_at": (customer_created + timedelta(days=rng.randint(0, 20))).isoformat(),
+                    "opened_at": (
+                        customer_created + timedelta(days=rng.randint(0, 20))
+                    ).isoformat(),
                 }
             )
 
     transactions: list[dict[str, object]] = []
-    base_time = datetime.now(UTC) - timedelta(days=30)
+    base_time = anchor - timedelta(days=30)
 
     for index in range(config.transactions):
         account = rng.choice(accounts)
         timestamp = base_time + timedelta(minutes=rng.randint(0, 30 * 24 * 60))
         amount = round(rng.lognormvariate(4.0, 0.8), 2)
 
-        # Controlled high-amount cases for anomaly queries.
         if index % 137 == 0:
             amount = round(rng.uniform(50000, 125000), 2)
 
@@ -101,7 +127,7 @@ def generate(config: SyntheticConfig, output_dir: Path) -> None:
                 "risk_score": risk_score,
                 "status": status,
                 "is_suspicious": risk_score > 0.85,
-                "created_at": datetime.now(UTC).isoformat(),
+                "created_at": anchor.isoformat(),
             }
         )
 
@@ -119,6 +145,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--accounts-per-customer", type=int, default=2)
     parser.add_argument("--transactions", type=int, default=1500)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--anchor",
+        type=parse_anchor,
+        default=None,
+        help="Optional ISO-8601 anchor. Same seed + anchor produces the same CSV content.",
+    )
     return parser.parse_args()
 
 
@@ -131,6 +163,7 @@ def main() -> None:
         accounts_per_customer=args.accounts_per_customer,
         transactions=args.transactions,
         seed=args.seed,
+        anchor_time=args.anchor,
     )
     generate(config, Path(args.output_dir))
     print(
