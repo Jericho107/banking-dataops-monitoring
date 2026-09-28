@@ -27,13 +27,14 @@ def _load_csv(table_name: str, csv_path: Path, settings: Settings | None = None)
     with csv_path.open("r", encoding="utf-8", newline="") as file:
         row_count = sum(1 for _ in csv.DictReader(file))
 
-    with connect(settings) as connection:
-        with connection.cursor() as cursor:
-            with csv_path.open("r", encoding="utf-8") as file:
-                with cursor.copy(f"COPY {table_name} FROM STDIN WITH CSV HEADER") as copy:
-                    for line in file:
-                        copy.write(line)
-        connection.commit()
+    with (
+        connect(settings) as connection,
+        connection.cursor() as cursor,
+        csv_path.open("r", encoding="utf-8") as file,
+        cursor.copy(f"COPY {table_name} FROM STDIN WITH CSV HEADER") as copy,
+    ):
+        for line in file:
+            copy.write(line)
 
     return row_count
 
@@ -65,12 +66,11 @@ def ingest_all(settings: Settings | None = None) -> dict[str, int]:
     create_schema(runtime)
     reset_tables(runtime)
 
-    loaded = {
+    return {
         "customers": load_customers(data_dir, runtime),
         "accounts": load_accounts(data_dir, runtime),
         "transactions": load_transactions(data_dir, runtime),
     }
-    return loaded
 
 
 def print_ingestion_summary(loaded: dict[str, int]) -> None:

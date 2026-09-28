@@ -5,7 +5,6 @@ import pandas as pd
 
 from banking_dataops.generate_synthetic_data import SyntheticConfig, generate
 
-
 FIXED_ANCHOR = datetime(2026, 9, 28, 12, 0, tzinfo=UTC)
 
 

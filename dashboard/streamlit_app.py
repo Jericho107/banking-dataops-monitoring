@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
+import psycopg
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from banking_dataops.monitoring import (  # noqa: E402
+from banking_dataops.monitoring import (
     load_channel_summary,
     load_latest_quality_results,
     load_reconciliation_summary,
@@ -33,7 +34,7 @@ try:
     status = load_status_summary()
     channel = load_channel_summary()
     suspicious = load_suspicious_transactions()
-except Exception as exc:  # pragma: no cover - dashboard runtime path
+except psycopg.Error as exc:  # pragma: no cover - dashboard runtime path
     st.error("Database is not ready or schema is missing.")
     st.markdown(
         """

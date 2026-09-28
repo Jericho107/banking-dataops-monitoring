@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import csv
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from decimal import Decimal
 from pathlib import Path
-import sys
 from uuid import uuid4
 
 import pandas as pd
@@ -240,46 +240,45 @@ def persist_reconciliation(
     """Persist one source-to-target reconciliation result."""
 
     runtime = settings or load_settings()
-    with connect(runtime) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                INSERT INTO reconciliation_results
-                    (
-                        reconciliation_id,
-                        reconciliation_name,
-                        source_count,
-                        target_count,
-                        count_delta,
-                        source_total,
-                        target_total,
-                        amount_delta,
-                        missing_in_target,
-                        unexpected_in_target,
-                        amount_mismatch_count,
-                        source_duplicate_ids,
-                        target_duplicate_ids,
-                        status
-                    )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """,
+    with connect(runtime) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO reconciliation_results
                 (
-                    f"REC-{uuid4().hex[:12].upper()}",
-                    result.reconciliation_name,
-                    result.source_count,
-                    result.target_count,
-                    result.count_delta,
-                    result.source_total,
-                    result.target_total,
-                    result.amount_delta,
-                    result.missing_in_target,
-                    result.unexpected_in_target,
-                    result.amount_mismatch_count,
-                    result.source_duplicate_ids,
-                    result.target_duplicate_ids,
-                    result.status,
-                ),
-            )
+                    reconciliation_id,
+                    reconciliation_name,
+                    source_count,
+                    target_count,
+                    count_delta,
+                    source_total,
+                    target_total,
+                    amount_delta,
+                    missing_in_target,
+                    unexpected_in_target,
+                    amount_mismatch_count,
+                    source_duplicate_ids,
+                    target_duplicate_ids,
+                    status
+                )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                f"REC-{uuid4().hex[:12].upper()}",
+                result.reconciliation_name,
+                result.source_count,
+                result.target_count,
+                result.count_delta,
+                result.source_total,
+                result.target_total,
+                result.amount_delta,
+                result.missing_in_target,
+                result.unexpected_in_target,
+                result.amount_mismatch_count,
+                result.source_duplicate_ids,
+                result.target_duplicate_ids,
+                result.status,
+            ),
+        )
         connection.commit()
 
 
