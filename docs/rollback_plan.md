@@ -8,7 +8,7 @@ The project has no production rollback claim.
 
 ## Preferred recovery
 
-The source CSV is deterministic and the PostgreSQL target is disposable. Recovery therefore means rebuilding the target from the source and re-running controls.
+The source CSV is reproducible when generated with the same seed and explicit anchor, and the PostgreSQL target is disposable. Recovery therefore means rebuilding the target from the source and re-running controls.
 
 ```bash
 make ingest
@@ -30,7 +30,7 @@ The reset:
 
 1. removes the local PostgreSQL volume;
 2. starts PostgreSQL and waits for its health check;
-3. regenerates deterministic synthetic source data;
+3. regenerates seeded synthetic source data;
 4. ingests the source;
 5. runs quality controls;
 6. runs source-to-target reconciliation.
