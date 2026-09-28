@@ -35,7 +35,7 @@ The target must match the source on:
 ## Technical implementation
 
 ```text
-deterministic synthetic generator
+seeded synthetic generator
         ↓
 CSV source
         ↓
