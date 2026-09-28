@@ -59,7 +59,7 @@ jobs:
       - name: Unit tests
         run: pytest -q
 
-      - name: Generate deterministic source data
+      - name: Generate seeded source data
         run: |
           python -m banking_dataops.generate_synthetic_data             --output-dir data             --customers 25             --transactions 300             --seed 42
 
