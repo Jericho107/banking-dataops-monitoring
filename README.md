@@ -8,6 +8,8 @@
 
 **PostgreSQL · Python · SQL · Data Quality · Source-to-Target Reconciliation · Streamlit · Docker · CI**
 
+[![CI](https://github.com/Jericho107/banking-dataops-monitoring/actions/workflows/ci.yml/badge.svg)](https://github.com/Jericho107/banking-dataops-monitoring/actions/workflows/ci.yml)
+
 [PRETORIA BI](https://pretoriabi.com) · [PROOF MATRIX](docs/proof_matrix.md) · [ARCHITECTURE](docs/architecture.md) · [VALIDATION](docs/VALIDATION.md)
 
 </div>
