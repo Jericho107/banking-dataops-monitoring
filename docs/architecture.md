@@ -12,7 +12,7 @@ The architecture therefore separates **source evidence**, **target evidence**, *
 
 ```mermaid
 flowchart TD
-    A[Deterministic synthetic generator] --> B[CSV source files]
+    A[Seeded synthetic generator] --> B[CSV source files]
     B --> C[PostgreSQL COPY ingestion]
     C --> D[(PostgreSQL target)]
 
