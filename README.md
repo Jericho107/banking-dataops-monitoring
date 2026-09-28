@@ -20,7 +20,7 @@
 
 This repository implements a compact DataOps control loop around that question.
 
-It generates deterministic synthetic transaction feeds, loads them into PostgreSQL, applies data-quality controls, performs an actual **source CSV → PostgreSQL reconciliation**, persists the evidence and exposes the operational state through Streamlit.
+It generates seeded synthetic transaction feeds, loads them into PostgreSQL, applies data-quality controls, performs an actual **source CSV → PostgreSQL reconciliation**, persists the evidence and exposes the operational state through Streamlit.
 
 No real banking, client or production data is used.
 
@@ -244,7 +244,7 @@ This is a **public technical case study**, not a bank-grade production platform.
 What is intentionally demonstrated:
 
 - relational modelling;
-- deterministic synthetic source generation;
+- seeded synthetic source generation;
 - ingestion;
 - SQL-backed controls;
 - Python orchestration;
