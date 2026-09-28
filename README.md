@@ -1,112 +1,85 @@
-# banking-dataops-monitoring
-
 <div align="center">
 
-<img src="assets/banking-dataops-banner.svg" alt="banking-dataops-monitoring banner" width="100%"/>
+<img src="assets/banking-dataops-banner.svg" alt="Banking DataOps Monitoring" width="100%">
 
-<br/>
+# Banking DataOps Monitoring
 
-**Synthetic regulated-data monitoring lab for DataOps, data quality, reconciliation and production support**
+### A synthetic transaction-control system for data quality, reconciliation and operational evidence
 
-PostgreSQL / Python / SQL controls / Streamlit / Data quality / Reconciliation / Incident runbooks
+**PostgreSQL · Python · SQL · Data Quality · Source-to-Target Reconciliation · Streamlit · Docker · CI**
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-![Data Quality](https://img.shields.io/badge/Data%20Quality-SQL%20Controls-2EA043?style=flat)
-[![CI](https://github.com/KinSushi/banking-dataops-monitoring/actions/workflows/ci.yml/badge.svg)](https://github.com/KinSushi/banking-dataops-monitoring/actions)
-![Tests](https://img.shields.io/badge/tests-pytest-0A9396)
-![Lint](https://img.shields.io/badge/lint-ruff-orange)
-![Public Safety](https://img.shields.io/badge/Data-Synthetic%20Only-24292F?style=flat)
+[PRETORIA BI](https://pretoriabi.com) · [PROOF MATRIX](docs/proof_matrix.md) · [ARCHITECTURE](docs/architecture.md) · [VALIDATION](docs/VALIDATION.md)
 
 </div>
 
 ---
 
-## Executive summary
+## The control question
 
-`banking-dataops-monitoring` is a public technical portfolio repository demonstrating a complete local DataOps control loop using synthetic regulated-data patterns.
+> **Can an analytics team prove that every source transaction reached the target store without silent loss, duplication or amount mutation?**
+
+This repository implements a compact DataOps control loop around that question.
+
+It generates seeded synthetic transaction feeds, loads them into PostgreSQL, applies data-quality controls, performs an actual **source CSV → PostgreSQL reconciliation**, persists the evidence and exposes the operational state through Streamlit.
+
+No real banking, client or production data is used.
+
+---
+
+## What the system proves
 
 ```text
-synthetic data -> PostgreSQL -> SQL controls -> Python runner -> reconciliation -> Streamlit dashboard -> incident report
+SYNTHETIC SOURCE CSV
+        │
+        ├── row count
+        ├── amount total
+        ├── transaction IDs
+        └── per-ID amounts
+        │
+        ▼
+   PostgreSQL target
+        │
+        ▼
+DATA QUALITY CONTROLS
+        │
+        ▼
+SOURCE ↔ TARGET RECONCILIATION
+        │
+        ├── count delta
+        ├── amount delta
+        ├── missing IDs
+        ├── unexpected IDs
+        ├── duplicate IDs
+        └── amount mismatches
+        │
+        ▼
+ PASS / FAIL EVIDENCE
+        │
+        ├── persisted control results
+        ├── monitoring dashboard
+        └── CI reverse test
 ```
 
-It is designed to prove SQL, Python, data quality, data reconciliation, monitoring, incident investigation and regulated-data production support readiness.
+The important part is not that a reconciliation function exists.
 
-No real banking, insurance, health, client, employer or private data belongs here.
+The repository deliberately **mutates one target amount inside CI and requires the reconciliation command to fail**. The target is then restored and the same control must return to PASS.
 
----
-
-## Validation evidence
-
-Generated validation artifacts are available in:
-
-- [docs/local_run_report.md](docs/local_run_report.md)
-- [docs/screenshots.md](docs/screenshots.md)
-- [docs/VALIDATION.md](docs/VALIDATION.md)
-
-Current public validation covers:
-
-```text
-pip install
-python -m compileall
-pytest
-ruff
-synthetic data generation
-package import checks
-secret keyword review
-```
-
-The latest report shows `pytest`, `ruff`, synthetic data generation and import checks passing. The `secret-keyword-scan` step is intentionally marked as `REVIEW` because documentation and `.env.example` contain safety-related keywords.
+That is the reverse test for the central claim.
 
 ---
 
-## Documentation index
+## Proof map
 
-| Document | Purpose |
-|---|---|
-| [PORTFOLIO.md](PORTFOLIO.md) | Recruiter-readable technical brief |
-| [docs/architecture.md](docs/architecture.md) | System architecture and execution flow |
-| [docs/data_dictionary.md](docs/data_dictionary.md) | Table and field definitions |
-| [docs/controls_matrix.md](docs/controls_matrix.md) | Data controls mapped to risks and evidence |
-| [docs/incident_runbook.md](docs/incident_runbook.md) | Incident investigation workflow |
-| [docs/rollback_plan.md](docs/rollback_plan.md) | Local reset and rollback procedure |
-| [docs/monitoring_plan.md](docs/monitoring_plan.md) | Monitoring dimensions and future observability path |
-| [docs/public_safety.md](docs/public_safety.md) | Public GitHub safety rules |
-| [docs/screenshots.md](docs/screenshots.md) | Validation previews and content screenshots |
-| [docs/VALIDATION.md](docs/VALIDATION.md) | Local and CI validation procedure |
+| Claim | Evidence | Reverse test |
+|---|---|---|
+| Source-to-target reconciliation is real | `reconciliation.py` compares source CSV with PostgreSQL | CI alters one target amount and expects a non-zero exit |
+| Data-quality controls are executable | SQL-backed controls + Python runner | control result logic is unit-tested |
+| The pipeline is reproducible | generator + ingestion + Docker + Makefile | CI rebuilds the flow from seeded synthetic data |
+| Failures are visible | persisted reconciliation status + Streamlit | corrupted target produces FAIL evidence |
+| Software quality is enforced | `pytest` + `ruff` + compile step | every push and PR runs validation |
+| Public data is safe to inspect | seeded synthetic generator | repository policy excludes real operational data |
 
----
-
-## What a run produces (synthetic data)
-
-A full local run executes the control loop end to end and leaves reproducible evidence on disk:
-
-| Stage | Output |
-|---|---|
-| Quality controls | 7 checks (nulls, duplicates, invalid amounts, referential integrity, risk score, status, freshness) |
-| Reconciliation | source-vs-target row and amount deltas in `reports/` |
-| Dashboard | Streamlit monitoring view (`dashboard/streamlit_app.py`) |
-| Incident | runbook-driven investigation note in `docs/incident_runbook.md` |
-| Validation | `pytest` + `ruff` results in `docs/local_run_report.md` |
-
-Reproduce with `make reset` then `make ci`. All figures come from **synthetic** data only.
-
----
-
-## Target roles
-
-| Role family | Why this project helps |
-|---|---|
-| Data Engineer | schema, ingestion, SQL and Python data flow |
-| DataOps Engineer | quality checks, monitoring, reconciliation, runbooks |
-| Application & Data Support | incident investigation and operational controls |
-| IT Production Engineer | runtime, Docker, Makefile, operational commands |
-| Data Quality Analyst | controls matrix and validation evidence |
-| Risk / Compliance Data Analyst | anomaly monitoring and audit-oriented documentation |
-| Insurance / Claims Data Analyst | claims-style data-quality and reconciliation patterns |
-| Big-tech data platforms | reproducibility, CI, tests and monitoring pattern |
+Full mapping: [docs/proof_matrix.md](docs/proof_matrix.md).
 
 ---
 
@@ -114,37 +87,90 @@ Reproduce with `make reset` then `make ci`. All figures come from **synthetic** 
 
 ```mermaid
 flowchart LR
- A[Synthetic generator] --> B[CSV files]
- B --> C[PostgreSQL 16]
- C --> D[SQL quality controls]
- C --> E[Reconciliation queries]
- D --> F[Python quality runner]
- E --> G[Python reconciliation runner]
- F --> H[quality_check_results]
- G --> I[reconciliation_results]
- H --> J[Streamlit dashboard]
- I --> J
- F --> K[Incident report]
- J --> L[Operational review]
+    A[Seeded synthetic source] --> B[CSV source files]
+    B --> C[PostgreSQL ingestion]
+    C --> D[(PostgreSQL target)]
+
+    D --> E[SQL-backed quality controls]
+    E --> F[quality_check_results]
+
+    B --> G[Source snapshot]
+    D --> H[Target snapshot]
+    G --> I[Reconciliation engine]
+    H --> I
+    I --> J[reconciliation_results]
+
+    F --> K[Streamlit monitoring]
+    J --> K
+
+    L[GitHub Actions] --> M[Clean pipeline test]
+    L --> N[Target mutation]
+    N --> O[Expected reconciliation failure]
+    O --> P[Restore and prove recovery]
 ```
+
+Detailed design: [docs/architecture.md](docs/architecture.md).
+
+---
+
+## Reconciliation contract
+
+A reconciliation passes only when all of the following are true:
+
+- source and target row counts match;
+- source and target amount totals match to the cent;
+- no source transaction is missing from the target;
+- no unexpected transaction exists in the target;
+- no shared transaction ID has a different amount;
+- no duplicate transaction ID exists in either snapshot.
+
+The CLI fails closed:
+
+```bash
+python -m banking_dataops.reconciliation
+```
+
+A mismatch returns a non-zero process exit code, making the control usable in CI or scheduled orchestration.
+
+---
+
+## Data-quality controls
+
+| Control | Risk detected |
+|---|---|
+| Critical nulls | incomplete operational records |
+| Duplicate transaction IDs | duplicate processing |
+| Invalid amounts | impossible or out-of-policy values |
+| Referential integrity | orphan transactions |
+| Risk-score range | malformed analytical features |
+| Status validity | unexpected lifecycle state |
+| Freshness | stale data |
+| Source-to-target reconciliation | silent loss, insertion or mutation |
+
+Control ownership and evidence are documented in [docs/controls_matrix.md](docs/controls_matrix.md).
 
 ---
 
 ## Quickstart
 
+### Requirements
+
+- Python 3.12+
+- Docker / Docker Compose
+
+### Run the clean pipeline
+
 ```bash
 make install
-make generate
-make ci
 make up
+make generate
 make ingest
 make quality
 make reconcile
-make incident
 make dashboard
 ```
 
-One-command local reset:
+Or rebuild the local synthetic environment:
 
 ```bash
 make reset
@@ -152,353 +178,120 @@ make reset
 
 ---
 
+## Reverse test locally
+
+First prove the clean flow:
+
+```bash
+make reset
+```
+
+Then alter one target value:
+
+```sql
+UPDATE transactions
+SET amount_chf = amount_chf + 1
+WHERE transaction_id = (
+    SELECT MIN(transaction_id)
+    FROM transactions
+);
+```
+
+Run:
+
+```bash
+make reconcile
+```
+
+Expected result: **FAIL** with an amount delta and transaction-level amount mismatch.
+
+Restore with:
+
+```bash
+make ingest
+make reconcile
+```
+
+Expected result: **PASS**.
+
+---
+
 ## Repository structure
 
 ```text
 banking-dataops-monitoring/
-|-- README.md
-|-- PORTFOLIO.md
-|-- LICENSE
-|-- .env.example
-|-- pyproject.toml
-|-- Makefile
-|-- docker-compose.yml
-|-- assets/
-|-- .github/workflows/
-|-- data/
-|-- sql/
-|-- src/banking_dataops/
-|-- dashboard/
-|-- tests/
-`-- docs/
+├── .github/workflows/ci.yml
+├── assets/
+├── dashboard/
+├── data/
+├── docs/
+├── output/
+├── sql/
+├── src/banking_dataops/
+├── tests/
+├── docker-compose.yml
+├── Makefile
+├── pyproject.toml
+└── README.md
 ```
 
 ---
 
-## Quality controls
+## Engineering boundaries
 
-| Control | Evidence |
-|---|---|
-| Critical nulls | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Duplicate transactions | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid amounts | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Referential integrity | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid risk score | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid status | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Freshness | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Source-system reconciliation | `src/banking_dataops/reconciliation.py`, `sql/03_reconciliation_queries.sql` |
-| Dashboard monitoring | `dashboard/streamlit_app.py` |
-| Incident workflow | `docs/incident_runbook.md` |
+This is a **public technical case study**, not a bank-grade production platform.
 
----
+What is intentionally demonstrated:
 
-## Tests and CI
+- relational modelling;
+- seeded synthetic source generation;
+- ingestion;
+- SQL-backed controls;
+- Python orchestration;
+- transaction-level source/target reconciliation;
+- failure detection;
+- monitoring;
+- testing;
+- CI;
+- operational documentation.
 
-```bash
-make ci
-```
+Known technical limitation:
 
-The standard CI workflow runs:
+- reconciliation currently validates transaction identity and `amount_chf`, not byte-for-byte equality of every transaction attribute; a production extension could compare canonical row hashes or field-level contracts.
 
-```text
-ruff check .
-pytest
-```
+What is intentionally not claimed:
 
-The extended portfolio validation workflow also generates public validation reports and screenshots under `docs/`.
+- production scale;
+- regulatory certification;
+- real fraud detection;
+- real banking integration;
+- production alerting or observability;
+- production-grade secrets management.
 
----
-
-## Public-safety rules
-
-- synthetic data only;
-- no real bank data;
-- no real insurance or health data;
-- no real client data;
-- no employer-specific application content;
-- no CVs, cover letters or job trackers;
-- no salary targets;
-- no secrets, tokens, hostnames or private IPs;
-- no production decisioning claims.
+Those boundaries are part of the evidence, not disclaimers added after the fact.
 
 ---
 
-## Non-goals
-
-This project is not:
-
-- a production data platform;
-- a bank-grade control framework;
-- a real fraud system;
-- an investment, credit, insurance or health decision engine;
-- a repository for job applications.
-
----
-
-## Portfolio signal
-
-This repository proves the ability to build, document and operate a small but complete regulated-data monitoring loop: generation, ingestion, validation, reconciliation, reporting, incident handling and public safety boundaries.
-
----
-
-## Portfolio layer
-
-This repository is part of the KinSushi public technical portfolio.
-
-| Layer | Evidence |
-|---|---|
-| DataOps | SQL controls, reconciliation, Streamlit monitoring, incident runbooks |
-
-Detailed cross-repository context: [docs/PORTFOLIO_LAYER.md](docs/PORTFOLIO_LAYER.md)
-# banking-dataops-monitoring
-
-<div align="center">
-
-<img src="assets/banking-dataops-banner.svg" alt="banking-dataops-monitoring banner" width="100%"/>
-
-<br/>
-
-**Synthetic regulated-data monitoring lab for DataOps, data quality, reconciliation and production support**
-
-PostgreSQL / Python / SQL controls / Streamlit / Data quality / Reconciliation / Incident runbooks
-
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat&logo=postgresql&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-![Data Quality](https://img.shields.io/badge/Data%20Quality-SQL%20Controls-2EA043?style=flat)
-[![CI](https://github.com/KinSushi/banking-dataops-monitoring/actions/workflows/ci.yml/badge.svg)](https://github.com/KinSushi/banking-dataops-monitoring/actions)
-![Tests](https://img.shields.io/badge/tests-pytest-0A9396)
-![Lint](https://img.shields.io/badge/lint-ruff-orange)
-![Public Safety](https://img.shields.io/badge/Data-Synthetic%20Only-24292F?style=flat)
-
-</div>
-
----
-
-## Executive summary
-
-`banking-dataops-monitoring` is a public technical portfolio repository demonstrating a complete local DataOps control loop using synthetic regulated-data patterns.
-
-```text
-synthetic data -> PostgreSQL -> SQL controls -> Python runner -> reconciliation -> Streamlit dashboard -> incident report
-```
-
-It is designed to prove SQL, Python, data quality, data reconciliation, monitoring, incident investigation and regulated-data production support readiness.
-
-No real banking, insurance, health, client, employer or private data belongs here.
-
----
-
-## Validation evidence
-
-Generated validation artifacts are available in:
-
-- [docs/local_run_report.md](docs/local_run_report.md)
-- [docs/screenshots.md](docs/screenshots.md)
-- [docs/VALIDATION.md](docs/VALIDATION.md)
-
-Current public validation covers:
-
-```text
-pip install
-python -m compileall
-pytest
-ruff
-synthetic data generation
-package import checks
-secret keyword review
-```
-
-The latest report shows `pytest`, `ruff`, synthetic data generation and import checks passing. The `secret-keyword-scan` step is intentionally marked as `REVIEW` because documentation and `.env.example` contain safety-related keywords.
-
----
-
-## Documentation index
+## Documentation
 
 | Document | Purpose |
 |---|---|
-| [PORTFOLIO.md](PORTFOLIO.md) | Recruiter-readable technical brief |
-| [docs/architecture.md](docs/architecture.md) | System architecture and execution flow |
-| [docs/data_dictionary.md](docs/data_dictionary.md) | Table and field definitions |
-| [docs/controls_matrix.md](docs/controls_matrix.md) | Data controls mapped to risks and evidence |
-| [docs/incident_runbook.md](docs/incident_runbook.md) | Incident investigation workflow |
-| [docs/rollback_plan.md](docs/rollback_plan.md) | Local reset and rollback procedure |
-| [docs/monitoring_plan.md](docs/monitoring_plan.md) | Monitoring dimensions and future observability path |
-| [docs/public_safety.md](docs/public_safety.md) | Public GitHub safety rules |
-| [docs/screenshots.md](docs/screenshots.md) | Validation previews and content screenshots |
-| [docs/VALIDATION.md](docs/VALIDATION.md) | Local and CI validation procedure |
+| [Technical case study](PORTFOLIO.md) | business/engineering summary |
+| [Architecture](docs/architecture.md) | execution and control flow |
+| [Proof matrix](docs/proof_matrix.md) | claims mapped to verifiable evidence |
+| [Data dictionary](docs/data_dictionary.md) | table and field definitions |
+| [Controls matrix](docs/controls_matrix.md) | controls mapped to operational risk |
+| [Validation](docs/VALIDATION.md) | local and CI verification |
+| [Incident runbook](docs/incident_runbook.md) | failure investigation workflow |
+| [Monitoring plan](docs/monitoring_plan.md) | monitored states and future observability |
+| [Rollback plan](docs/rollback_plan.md) | safe reset of the synthetic environment |
 
 ---
 
-## What a run produces (synthetic data)
+<div align="center">
 
-A full local run executes the control loop end to end and leaves reproducible evidence on disk:
+### Built as public technical evidence for [Pretoria BI](https://pretoriabi.com)
 
-| Stage | Output |
-|---|---|
-| Quality controls | 7 checks (nulls, duplicates, invalid amounts, referential integrity, risk score, status, freshness) |
-| Reconciliation | source-vs-target row and amount deltas in `reports/` |
-| Dashboard | Streamlit monitoring view (`dashboard/streamlit_app.py`) |
-| Incident | runbook-driven investigation note in `docs/incident_runbook.md` |
-| Validation | `pytest` + `ruff` results in `docs/local_run_report.md` |
+**DATA · INTELLIGENCE · PERFORMANCE**
 
-Reproduce with `make reset` then `make ci`. All figures come from **synthetic** data only.
-
----
-
-## Target roles
-
-| Role family | Why this project helps |
-|---|---|
-| Data Engineer | schema, ingestion, SQL and Python data flow |
-| DataOps Engineer | quality checks, monitoring, reconciliation, runbooks |
-| Application & Data Support | incident investigation and operational controls |
-| IT Production Engineer | runtime, Docker, Makefile, operational commands |
-| Data Quality Analyst | controls matrix and validation evidence |
-| Risk / Compliance Data Analyst | anomaly monitoring and audit-oriented documentation |
-| Insurance / Claims Data Analyst | claims-style data-quality and reconciliation patterns |
-| Big-tech data platforms | reproducibility, CI, tests and monitoring pattern |
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
- A[Synthetic generator] --> B[CSV files]
- B --> C[PostgreSQL 16]
- C --> D[SQL quality controls]
- C --> E[Reconciliation queries]
- D --> F[Python quality runner]
- E --> G[Python reconciliation runner]
- F --> H[quality_check_results]
- G --> I[reconciliation_results]
- H --> J[Streamlit dashboard]
- I --> J
- F --> K[Incident report]
- J --> L[Operational review]
-```
-
----
-
-## Quickstart
-
-```bash
-make install
-make generate
-make ci
-make up
-make ingest
-make quality
-make reconcile
-make incident
-make dashboard
-```
-
-One-command local reset:
-
-```bash
-make reset
-```
-
----
-
-## Repository structure
-
-```text
-banking-dataops-monitoring/
-|-- README.md
-|-- PORTFOLIO.md
-|-- LICENSE
-|-- .env.example
-|-- pyproject.toml
-|-- Makefile
-|-- docker-compose.yml
-|-- assets/
-|-- .github/workflows/
-|-- data/
-|-- sql/
-|-- src/banking_dataops/
-|-- dashboard/
-|-- tests/
-`-- docs/
-```
-
----
-
-## Quality controls
-
-| Control | Evidence |
-|---|---|
-| Critical nulls | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Duplicate transactions | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid amounts | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Referential integrity | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid risk score | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Invalid status | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Freshness | `src/banking_dataops/quality_checks.py`, `sql/02_data_quality_checks.sql` |
-| Source-system reconciliation | `src/banking_dataops/reconciliation.py`, `sql/03_reconciliation_queries.sql` |
-| Dashboard monitoring | `dashboard/streamlit_app.py` |
-| Incident workflow | `docs/incident_runbook.md` |
-
----
-
-## Tests and CI
-
-```bash
-make ci
-```
-
-The standard CI workflow runs:
-
-```text
-ruff check .
-pytest
-```
-
-The extended portfolio validation workflow also generates public validation reports and screenshots under `docs/`.
-
----
-
-## Public-safety rules
-
-- synthetic data only;
-- no real bank data;
-- no real insurance or health data;
-- no real client data;
-- no employer-specific application content;
-- no CVs, cover letters or job trackers;
-- no salary targets;
-- no secrets, tokens, hostnames or private IPs;
-- no production decisioning claims.
-
----
-
-## Non-goals
-
-This project is not:
-
-- a production data platform;
-- a bank-grade control framework;
-- a real fraud system;
-- an investment, credit, insurance or health decision engine;
-- a repository for job applications.
-
----
-
-## Portfolio signal
-
-This repository proves the ability to build, document and operate a small but complete regulated-data monitoring loop: generation, ingestion, validation, reconciliation, reporting, incident handling and public safety boundaries.
-
----
-
-## Portfolio layer
-
-This repository is part of the KinSushi public technical portfolio.
-
-| Layer | Evidence |
-|---|---|
-| DataOps | SQL controls, reconciliation, Streamlit monitoring, incident runbooks |
-
-Detailed cross-repository context: [docs/PORTFOLIO_LAYER.md](docs/PORTFOLIO_LAYER.md)
+</div>

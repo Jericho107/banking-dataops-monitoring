@@ -1,158 +1,90 @@
-# Portfolio Brief — banking-dataops-monitoring
+# Technical Case Study — Banking DataOps Monitoring
 
-## One-line summary
+## Control problem
 
-Synthetic regulated-data monitoring lab demonstrating PostgreSQL, SQL data-quality controls, Python automation, reconciliation, Streamlit monitoring and incident documentation.
+A target data store can look healthy while silently diverging from its source.
 
----
+A simple row-count dashboard is insufficient if:
 
-## Recruiter-readable positioning
+- a transaction disappears;
+- an unexpected transaction appears;
+- an amount changes after ingestion;
+- duplicates enter the source;
+- aggregate totals happen to hide transaction-level differences.
 
-This project is public technical evidence for DataOps, Data Engineering, Application & Data Support, Data Quality and regulated-data production roles.
+This case study implements a compact control system that treats the source CSV and PostgreSQL target as distinct states and makes divergence observable.
 
-It demonstrates the ability to build and operate a small but complete data-control loop:
+## Decision
 
-```text
-synthetic data -> PostgreSQL -> SQL controls -> Python runner -> reconciliation -> dashboard -> runbook
-```
+The operational decision is binary:
 
----
+> **Is the target state trustworthy enough to continue downstream processing?**
 
-## What this project proves
+The reconciliation command therefore fails closed when the contract is broken.
 
-| Evidence | Technical signal |
-|---|---|
-| Synthetic data generator | safe reproducible dataset creation |
-| PostgreSQL schema | relational modeling and data constraints |
-| SQL quality checks | production-style data controls |
-| Python quality runner | automation and operational execution |
-| Reconciliation module | source-system integrity checks |
-| Streamlit dashboard | monitoring and business-readable status |
-| Incident runbook | production support and RCA mindset |
-| Controls matrix | regulated-environment documentation |
-| CI workflow | software quality discipline |
+## Control contract
 
----
+The target must match the source on:
 
-## Role fit matrix
+- row count;
+- total amount;
+- transaction-ID membership;
+- per-transaction amount;
+- duplicate-ID absence.
 
-| Role | Fit |
-|---|---|
-| Data Engineer | SQL schema, ingestion, Python data flow |
-| DataOps Engineer | quality checks, reconciliation, monitoring |
-| Application & Data Support | incident investigation, failed-control triage |
-| IT Production Engineer | Docker Compose, Makefile, runbooks |
-| Data Quality Analyst | controls matrix and SQL checks |
-| Risk / Compliance Data Analyst | synthetic risk and anomaly controls |
-| Insurance / Claims Data Analyst | synthetic regulated-data patterns |
-
----
-
-## Interview angles
-
-### DataOps / Application Support
-
-> I can investigate failed data controls, check source-system reconciliation, review failed rows and document incidents through a runbook.
-
-### Data Engineer
-
-> I can design a small relational model, generate data, load it into PostgreSQL and automate validation with Python.
-
-### Regulated-data environments
-
-> I separate public technical evidence from private data and document controls, runbooks and rollback procedures.
-
----
-
-## What this repo is not
-
-- Not production infrastructure.
-- Not real banking or insurance data.
-- Not a fraud decision engine.
-- Not investment, credit, insurance or health advice.
-- Not application material.
-
----
-
-## Public-safety boundary
-
-This project must never contain real banking, insurance, health, client, employer or private data. All datasets are synthetic or open by design.
-# Portfolio Brief — banking-dataops-monitoring
-
-## One-line summary
-
-Synthetic regulated-data monitoring lab demonstrating PostgreSQL, SQL data-quality controls, Python automation, reconciliation, Streamlit monitoring and incident documentation.
-
----
-
-## Recruiter-readable positioning
-
-This project is public technical evidence for DataOps, Data Engineering, Application & Data Support, Data Quality and regulated-data production roles.
-
-It demonstrates the ability to build and operate a small but complete data-control loop:
+## Technical implementation
 
 ```text
-synthetic data -> PostgreSQL -> SQL controls -> Python runner -> reconciliation -> dashboard -> runbook
+seeded synthetic generator
+        ↓
+CSV source
+        ↓
+PostgreSQL ingestion
+        ↓
+quality controls
+        +
+source/target reconciliation
+        ↓
+persisted evidence
+        ↓
+Streamlit monitoring
+        ↓
+CI reverse test
 ```
 
----
+## Reverse test
 
-## What this project proves
+The CI workflow deliberately changes one target transaction by CHF 1.00 while leaving the source untouched.
 
-| Evidence | Technical signal |
-|---|---|
-| Synthetic data generator | safe reproducible dataset creation |
-| PostgreSQL schema | relational modeling and data constraints |
-| SQL quality checks | production-style data controls |
-| Python quality runner | automation and operational execution |
-| Reconciliation module | source-system integrity checks |
-| Streamlit dashboard | monitoring and business-readable status |
-| Incident runbook | production support and RCA mindset |
-| Controls matrix | regulated-environment documentation |
-| CI workflow | software quality discipline |
+The repository is considered correct only if:
 
----
+1. clean reconciliation passes;
+2. mutated target reconciliation fails;
+3. source reload restores a passing state.
 
-## Role fit matrix
+This converts the core claim from documentation into executable evidence.
 
-| Role | Fit |
-|---|---|
-| Data Engineer | SQL schema, ingestion, Python data flow |
-| DataOps Engineer | quality checks, reconciliation, monitoring |
-| Application & Data Support | incident investigation, failed-control triage |
-| IT Production Engineer | Docker Compose, Makefile, runbooks |
-| Data Quality Analyst | controls matrix and SQL checks |
-| Risk / Compliance Data Analyst | synthetic risk and anomaly controls |
-| Insurance / Claims Data Analyst | synthetic regulated-data patterns |
+## What this demonstrates
 
----
+- relational modelling;
+- seeded test-data generation with explicit reproducibility controls;
+- PostgreSQL ingestion;
+- SQL and Python control design;
+- source-to-target reconciliation;
+- transaction-level failure detection;
+- persisted operational evidence;
+- testing and CI;
+- operational runbook thinking.
 
-## Interview angles
+## What it does not claim
 
-### DataOps / Application Support
+- bank-grade infrastructure;
+- regulatory certification;
+- production scale;
+- real banking integrations;
+- real fraud or credit decisioning;
+- production observability.
 
-> I can investigate failed data controls, check source-system reconciliation, review failed rows and document incidents through a runbook.
+## Evidence
 
-### Data Engineer
-
-> I can design a small relational model, generate data, load it into PostgreSQL and automate validation with Python.
-
-### Regulated-data environments
-
-> I separate public technical evidence from private data and document controls, runbooks and rollback procedures.
-
----
-
-## What this repo is not
-
-- Not production infrastructure.
-- Not real banking or insurance data.
-- Not a fraud decision engine.
-- Not investment, credit, insurance or health advice.
-- Not application material.
-
----
-
-## Public-safety boundary
-
-This project must never contain real banking, insurance, health, client, employer or private data. All datasets are synthetic or open by design.
+See [docs/proof_matrix.md](docs/proof_matrix.md) for the claim-by-claim mapping.

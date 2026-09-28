@@ -1,54 +1,43 @@
-# Repository Standard
+# Engineering Standard
 
-This repository follows the public KinSushi portfolio standard for regulated and data-intensive systems.
+This repository follows the Pretoria BI public-evidence standard.
 
-## Visual standard
+## Evidence standard
 
-Each portfolio repository should contain:
+A technical claim should expose:
 
-- a banner SVG in `assets/`;
-- a centered README header;
-- stack badges;
-- an executive summary;
-- a documentation index;
-- architecture or workflow section;
-- quickstart commands;
-- public-safety rules;
-- portfolio signal section.
+- implementation;
+- reproducible execution path;
+- automated or inspectable evidence;
+- known limitations;
+- a reverse test when the claim is materially important.
 
-## Engineering standard
+## Repository standard
 
-Minimum expected evidence:
+Expected characteristics:
 
-- reproducible setup;
-- tests;
-- CI workflow;
-- clean package/module structure;
-- typed or readable Python where applicable;
-- `.gitignore` for generated/private files;
-- `.gitattributes` for line-ending stability;
-- no generated artifacts committed unless explicitly documented.
-
-## Regulated-data public safety
-
-Never commit:
-
-- real banking data;
-- real insurance or health data;
-- real client or employer data;
-- CVs, cover letters or job trackers;
-- private school documents;
-- secrets, tokens, private IPs or hostnames;
-- production decisioning claims.
+- business/control question stated before implementation detail;
+- clear architecture;
+- deterministic or documented data source;
+- structured Python where Python is used;
+- explicit SQL where SQL is material;
+- tests for meaningful failure modes;
+- CI for repeatable validation;
+- no credentials or private operational data;
+- documentation that matches executable commands;
+- no unsupported production-readiness claims.
 
 ## Review checklist
 
-Before merging or pushing:
+Before officialisation:
 
-- [ ] README still renders cleanly;
-- [ ] banner renders;
-- [ ] `ruff check .` passes when applicable;
-- [ ] `pytest` passes when applicable;
-- [ ] no private/application material is present;
-- [ ] docs match actual commands;
-- [ ] screenshots are sanitized.
+- [ ] README claims match implementation;
+- [ ] reverse test covers the central claim;
+- [ ] `ruff check .` passes;
+- [ ] `pytest` passes;
+- [ ] full CI pipeline passes;
+- [ ] data boundary is explicit;
+- [ ] architecture matches actual runtime flow;
+- [ ] stale/generated evidence is removed;
+- [ ] links render correctly;
+- [ ] known limitations are documented.

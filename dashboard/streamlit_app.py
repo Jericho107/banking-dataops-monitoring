@@ -68,10 +68,21 @@ if not volume.empty:
     st.line_chart(volume.set_index("booking_date")["transaction_count"])
     st.dataframe(volume, use_container_width=True)
 
-st.subheader("Reconciliation results")
+st.subheader("Source-to-target integrity")
 if reconciliation.empty:
     st.warning("No reconciliation results found. Run `make reconcile`.")
 else:
+    latest = reconciliation.iloc[0]
+    integrity_issues = (
+        int(latest["missing_in_target"])
+        + int(latest["unexpected_in_target"])
+        + int(latest["amount_mismatch_count"])
+    )
+    rec1, rec2, rec3, rec4 = st.columns(4)
+    rec1.metric("Reconciliation", str(latest["status"]))
+    rec2.metric("Count delta", int(latest["count_delta"]))
+    rec3.metric("Amount delta (CHF)", f'{float(latest["amount_delta"]):,.2f}')
+    rec4.metric("Transaction issues", integrity_issues)
     st.dataframe(reconciliation, use_container_width=True)
 
 col_a, col_b = st.columns(2)

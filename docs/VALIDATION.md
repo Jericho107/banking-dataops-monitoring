@@ -1,48 +1,91 @@
 # Validation
 
-## Purpose
+## Validation objective
 
-This file documents the local and CI validation path for this repository.
+Validation must prove both sides of the main claim:
 
-## Static validation
+1. a clean source and target reconcile successfully;
+2. a silent target mutation is detected as a failure.
 
-```powershell
+A pipeline that only proves the happy path is insufficient.
+
+## Static checks
+
+```bash
 python -m compileall -q src tests dashboard
-python -m pytest -q --maxfail=1
-python -m ruff check .
+ruff check .
+pytest -q
 ```
 
-## DataOps execution checks
+## Clean DataOps flow
 
-```powershell
-python -m banking_dataops.generate_synthetic_data --output-dir data --customers 5 --transactions 20
-python -m banking_dataops.quality_checks
-python -m banking_dataops.reconciliation
-```
-
-Database-backed commands require PostgreSQL through Docker Compose:
-
-```powershell
+```bash
 docker compose up -d
+python -m banking_dataops.generate_synthetic_data \
+  --output-dir data \
+  --customers 25 \
+  --transactions 300 \
+  --seed 42
 python -m banking_dataops.ingest
 python -m banking_dataops.quality_checks
 python -m banking_dataops.reconciliation
 ```
 
-## Public-safety validation
+Expected reconciliation status: `PASS`.
 
-```powershell
-Get-ChildItem -Recurse -File |
-  Where-Object { $_.FullName -notmatch "\\.git\\" -and $_.FullName -notmatch "\\.venv\\" } |
-  Select-String -Pattern "BEGIN .*PRIVATE KEY","gho_","api_key","secret","token","password"
+## Failure injection
+
+Change the target without changing the source:
+
+```sql
+UPDATE transactions
+SET amount_chf = amount_chf + 1
+WHERE transaction_id = (
+    SELECT MIN(transaction_id)
+    FROM transactions
+);
 ```
 
-Expected review notes:
+Then run:
 
-- `.env.example` may contain local placeholder names.
-- `.gitignore` and documentation may contain safety words such as `secret` or `password`.
-- Real credentials must never appear.
+```bash
+python -m banking_dataops.reconciliation
+```
 
-## Portfolio rule
+Expected behavior:
 
-This repository is public technical evidence. It must not contain CVs, cover letters, salary targets, private school documents, real client data, employer data, credentials or production decisioning claims.
+- reconciliation status = `FAIL`;
+- `amount_delta` != 0;
+- `amount_mismatch_count` >= 1;
+- process exit code is non-zero.
+
+## Recovery
+
+```bash
+python -m banking_dataops.ingest
+python -m banking_dataops.quality_checks
+python -m banking_dataops.reconciliation
+```
+
+Expected reconciliation status: `PASS`.
+
+## CI
+
+`.github/workflows/ci.yml` automates:
+
+- install;
+- compile;
+- Ruff;
+- pytest;
+- seeded source generation;
+- PostgreSQL ingestion;
+- data-quality controls;
+- clean reconciliation;
+- silent target mutation;
+- expected reconciliation failure;
+- source reload;
+- successful reconciliation recovery.
+
+## Boundary
+
+This validates a synthetic technical case study. It does not certify production readiness, regulatory compliance or production-scale performance.

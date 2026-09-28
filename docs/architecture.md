@@ -1,46 +1,135 @@
-# Architecture — banking-dataops-monitoring
+# Architecture — Banking DataOps Monitoring
 
-## Purpose
+## Control objective
 
-This document describes the executable architecture of the `banking-dataops-monitoring` project.
+The system answers one operational question:
 
-The project demonstrates a regulated-data monitoring pattern using synthetic data only.
+> Can we prove that the synthetic transaction source and the PostgreSQL analytical target remain materially identical after ingestion?
 
----
+The architecture therefore separates **source evidence**, **target evidence**, **quality controls** and **reconciliation controls** instead of treating database summaries as reconciliation.
 
-## Architecture diagram
+## Execution flow
 
 ```mermaid
-flowchart LR
-    A[Synthetic data generator] --> B[CSV files]
-    B --> C[PostgreSQL ingestion]
-    C --> D[Transactions schema]
-    D --> E[SQL data quality checks]
-    D --> F[Reconciliation queries]
-    E --> G[quality_check_results]
-    F --> H[reconciliation_results]
-    G --> I[Streamlit dashboard]
+flowchart TD
+    A[Seeded synthetic generator] --> B[CSV source files]
+    B --> C[PostgreSQL COPY ingestion]
+    C --> D[(PostgreSQL target)]
+
+    D --> E[SQL-backed data-quality controls]
+    E --> F[(quality_check_results)]
+
+    B --> G[Source reconciliation snapshot]
+    D --> H[Target reconciliation snapshot]
+
+    G --> I[Compare control totals and transaction evidence]
     H --> I
-    E --> J[Incident report]
+
+    I --> J[(reconciliation_results)]
+
+    F --> K[Streamlit monitoring]
+    J --> K
+
+    L[GitHub Actions] --> M[Generate clean source]
+    M --> N[Ingest]
+    N --> O[Quality controls]
+    O --> P[Clean reconciliation must PASS]
+    P --> Q[Mutate one target amount]
+    Q --> R[Reconciliation must FAIL]
+    R --> S[Reload source]
+    S --> T[Reconciliation must PASS]
 ```
 
----
+## Source boundary
 
-## Components
+The source of truth for reconciliation is:
 
-| Component | Path | Purpose |
-|---|---|---|
-| Synthetic data generator | `src/banking_dataops/generate_synthetic_data.py` | Creates fake customers, accounts and transactions |
-| PostgreSQL schema | `sql/00_schema.sql` | Defines customers, accounts, transactions and result tables |
-| Ingestion runner | `src/banking_dataops/ingest.py` | Loads generated CSV files into PostgreSQL |
-| Quality runner | `src/banking_dataops/quality_checks.py` | Runs quality controls and persists results |
-| Reconciliation runner | `src/banking_dataops/reconciliation.py` | Summarizes transaction counts and amounts |
-| Dashboard | `dashboard/streamlit_app.py` | Displays quality status, volume and summaries |
-| Controls matrix | `docs/controls_matrix.md` | Maps controls to risks and evidence |
-| Incident runbook | `docs/incident_runbook.md` | Documents investigation and response workflow |
+```text
+data/synthetic_transactions.csv
+```
 
----
+The source snapshot captures:
 
-## Public-safety boundary
+- row count;
+- amount total to the cent;
+- complete set of transaction IDs;
+- duplicate transaction IDs;
+- amount by transaction ID.
 
-No real banking, insurance, health, client, employer or private data belongs in this project.
+## Target boundary
+
+The target state is read independently from PostgreSQL:
+
+```sql
+SELECT transaction_id, amount_chf
+FROM transactions
+ORDER BY transaction_id;
+```
+
+The same control evidence is calculated from the target rows.
+
+## Reconciliation decision
+
+A reconciliation is `PASS` only when:
+
+1. target row count equals source row count;
+2. target amount total equals source amount total;
+3. no source transaction ID is missing from the target;
+4. no unexpected target ID exists;
+5. no shared transaction ID has a different amount;
+6. neither snapshot contains duplicate transaction IDs.
+
+Any failed condition produces `FAIL`.
+
+### Current reconciliation boundary
+
+The contract intentionally validates transaction identity and `amount_chf`. It does not currently compare every non-financial attribute such as channel, status or merchant category. A production extension could add canonical row hashes or field-level comparison for those attributes.
+
+The CLI exits non-zero on failure, which makes the reconciliation enforceable by CI or an orchestrator rather than merely descriptive.
+
+## Quality-control layer
+
+PostgreSQL-backed controls independently test:
+
+- critical nulls;
+- duplicate transactions;
+- invalid amounts;
+- orphan transactions;
+- invalid risk scores;
+- invalid statuses;
+- freshness.
+
+Quality checks and reconciliation serve different purposes:
+
+- **quality controls** test whether target data satisfy defined rules;
+- **reconciliation** tests whether target data faithfully represent the source.
+
+## Monitoring layer
+
+Streamlit reads persisted control evidence from:
+
+- `quality_check_results`;
+- `reconciliation_results`;
+- transaction summary queries.
+
+It does not calculate reconciliation itself.
+
+## CI reverse test
+
+The CI pipeline deliberately mutates one target transaction amount by CHF 1.00.
+
+A successful workflow requires:
+
+```text
+clean source/target        -> PASS
+silent target mutation     -> FAIL
+source state restored      -> PASS
+```
+
+This prevents the repository from claiming reconciliation solely because the happy path returns zero deltas.
+
+## Scope boundary
+
+This architecture is intentionally local and synthetic.
+
+It demonstrates control design, failure detection and reproducibility. It does not claim production scale, regulated deployment or real bank integration.

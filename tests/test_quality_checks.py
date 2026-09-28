@@ -1,4 +1,11 @@
-from banking_dataops.quality_checks import get_quality_checks, status_from_failed_rows
+from datetime import UTC, datetime
+
+from banking_dataops.quality_checks import (
+    QualityCheckResult,
+    get_quality_checks,
+    has_blocking_failures,
+    status_from_failed_rows,
+)
 
 
 def test_status_from_failed_rows() -> None:
@@ -18,3 +25,13 @@ def test_quality_checks_are_configured() -> None:
         assert check.check_name
         assert check.severity in {"high", "medium", "low"}
         assert "SELECT" in check.query.upper()
+
+
+def test_blocking_failure_detection() -> None:
+    now = datetime.now(UTC)
+    passing = QualityCheckResult("CTRL-001", "nulls", "PASS", 0, "high", now)
+    warning = QualityCheckResult("CTRL-007", "freshness", "WARN", 1, "low", now)
+    failing = QualityCheckResult("CTRL-003", "amounts", "FAIL", 1, "high", now)
+
+    assert not has_blocking_failures([passing, warning])
+    assert has_blocking_failures([passing, failing])

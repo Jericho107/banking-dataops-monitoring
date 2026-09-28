@@ -49,8 +49,32 @@ CREATE TABLE IF NOT EXISTS reconciliation_results (
     source_total NUMERIC(18,2),
     target_total NUMERIC(18,2),
     amount_delta NUMERIC(18,2),
+    missing_in_target INTEGER NOT NULL DEFAULT 0,
+    unexpected_in_target INTEGER NOT NULL DEFAULT 0,
+    amount_mismatch_count INTEGER NOT NULL DEFAULT 0,
+    source_duplicate_ids INTEGER NOT NULL DEFAULT 0,
+    target_duplicate_ids INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'PASS',
     executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS missing_in_target INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS unexpected_in_target INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS amount_mismatch_count INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS source_duplicate_ids INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS target_duplicate_ids INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE reconciliation_results
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PASS';
 
 CREATE TABLE IF NOT EXISTS incident_reports (
     incident_id TEXT PRIMARY KEY,

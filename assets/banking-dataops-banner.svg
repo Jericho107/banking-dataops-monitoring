@@ -1,38 +1,41 @@
-<svg width="1280" height="320" viewBox="0 0 1280 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="banking-dataops-monitoring banner">
+<svg width="1280" height="320" viewBox="0 0 1280 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banking DataOps Monitoring — Pretoria BI">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#07111F"/>
-      <stop offset="0.55" stop-color="#0B1F3A"/>
-      <stop offset="1" stop-color="#102A43"/>
+      <stop offset="0" stop-color="#050607"/>
+      <stop offset="0.55" stop-color="#111417"/>
+      <stop offset="1" stop-color="#1B2024"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="70" y1="40" x2="240" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2F4F5"/>
+      <stop offset=".45" stop-color="#AAB1B6"/>
+      <stop offset="1" stop-color="#60686E"/>
     </linearGradient>
     <style>
-      .title{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:42px;font-weight:750;fill:#fff}
-      .sub{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:21px;fill:#D8E2F0}
-      .chip{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:14px;font-weight:650;fill:#fff}
-      .node{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:13px;fill:#D8E2F0}
+      .title{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:42px;font-weight:760;fill:#F5F6F7}
+      .sub{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:20px;fill:#BFC5C9}
+      .micro{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:13px;letter-spacing:2px;fill:#8D969C}
+      .node{font-family:Inter,Segoe UI,Arial,sans-serif;font-size:13px;fill:#DDE1E3}
     </style>
   </defs>
-  <rect width="1280" height="320" rx="26" fill="url(#bg)"/>
-  <g opacity=".38">
-    <rect x="760" y="72" width="110" height="52" rx="12" fill="#0D419D" stroke="#58A6FF"/>
-    <text x="784" y="104" class="node">Data</text>
-    <rect x="910" y="72" width="132" height="52" rx="12" fill="#0F2F24" stroke="#2EA043"/>
-    <text x="936" y="104" class="node">PostgreSQL</text>
-    <rect x="1080" y="72" width="132" height="52" rx="12" fill="#24143D" stroke="#A371F7"/>
-    <text x="1108" y="104" class="node">Controls</text>
-    <rect x="910" y="185" width="132" height="52" rx="12" fill="#0F2F24" stroke="#2EA043"/>
-    <text x="944" y="217" class="node">Dashboard</text>
-    <path d="M870 98 H910" stroke="#9FB3C8" stroke-width="3"/>
-    <path d="M1042 98 H1080" stroke="#9FB3C8" stroke-width="3"/>
-    <path d="M1146 124 C1146 176 1042 172 1042 211" stroke="#9FB3C8" stroke-width="3" fill="none"/>
+  <rect width="1280" height="320" rx="24" fill="url(#bg)"/>
+  <path d="M70 238 L142 76 L214 238 H181 L142 147 L103 238 Z" fill="url(#silver)" opacity=".95"/>
+  <path d="M119 212 L142 158 L165 212 H151 L142 190 L133 212 Z" fill="#090A0B"/>
+  <text x="260" y="96" class="micro">PRETORIA BI · TECHNICAL CASE STUDY</text>
+  <text x="260" y="148" class="title">Banking DataOps Monitoring</text>
+  <text x="260" y="190" class="sub">Data Quality · Source-to-Target Reconciliation · Failure Detection · Operational Evidence</text>
+  <text x="260" y="236" class="micro">POSTGRESQL · PYTHON · SQL · STREAMLIT · DOCKER · CI</text>
+  <g opacity=".72">
+    <rect x="936" y="62" width="112" height="46" rx="10" fill="#15191C" stroke="#727B81"/>
+    <text x="963" y="90" class="node">SOURCE</text>
+    <rect x="1100" y="62" width="112" height="46" rx="10" fill="#15191C" stroke="#727B81"/>
+    <text x="1127" y="90" class="node">TARGET</text>
+    <rect x="1018" y="152" width="112" height="46" rx="10" fill="#102017" stroke="#3DAA68"/>
+    <text x="1050" y="180" class="node">CONTROL</text>
+    <path d="M1048 85 H1100" stroke="#899298" stroke-width="2"/>
+    <path d="M992 108 C992 132 1040 132 1058 152" stroke="#899298" stroke-width="2" fill="none"/>
+    <path d="M1156 108 C1156 132 1110 132 1092 152" stroke="#899298" stroke-width="2" fill="none"/>
+    <circle cx="1074" cy="238" r="19" fill="#102017" stroke="#3DAA68"/>
+    <path d="M1065 238 L1072 245 L1085 230" stroke="#DDE1E3" stroke-width="3" fill="none"/>
+    <path d="M1074 198 V219" stroke="#899298" stroke-width="2"/>
   </g>
-  <text x="74" y="104" class="title">banking-dataops-monitoring</text>
-  <text x="74" y="150" class="sub">PostgreSQL · SQL Controls · Data Quality · Reconciliation · Monitoring</text>
-  <text x="74" y="188" class="sub">Synthetic regulated-data patterns for DataOps and production support roles</text>
-  <rect x="74" y="232" width="140" height="36" rx="18" fill="#0D419D"/>
-  <text x="102" y="255" class="chip">PostgreSQL</text>
-  <rect x="230" y="232" width="136" height="36" rx="18" fill="#1A7F37"/>
-  <text x="258" y="255" class="chip">SQL Checks</text>
-  <rect x="382" y="232" width="126" height="36" rx="18" fill="#6E40C9"/>
-  <text x="412" y="255" class="chip">Runbooks</text>
 </svg>

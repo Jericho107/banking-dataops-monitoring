@@ -56,12 +56,25 @@ def load_latest_quality_results(settings: Settings | None = None) -> pd.DataFram
 
 
 def load_reconciliation_summary(settings: Settings | None = None) -> pd.DataFrame:
-    """Load latest reconciliation result rows."""
+    """Load latest source-to-target reconciliation result rows."""
 
     return fetch_dataframe(
         """
-        SELECT reconciliation_name, source_count, target_count, count_delta,
-               source_total, target_total, amount_delta, executed_at
+        SELECT
+            reconciliation_name,
+            status,
+            source_count,
+            target_count,
+            count_delta,
+            source_total,
+            target_total,
+            amount_delta,
+            missing_in_target,
+            unexpected_in_target,
+            amount_mismatch_count,
+            source_duplicate_ids,
+            target_duplicate_ids,
+            executed_at
         FROM reconciliation_results
         ORDER BY executed_at DESC
         LIMIT 20
@@ -75,7 +88,10 @@ def load_transaction_volume(settings: Settings | None = None) -> pd.DataFrame:
 
     return fetch_dataframe(
         """
-        SELECT booking_date, COUNT(*) AS transaction_count, ROUND(SUM(amount_chf), 2) AS total_amount_chf
+        SELECT
+            booking_date,
+            COUNT(*) AS transaction_count,
+            ROUND(SUM(amount_chf), 2) AS total_amount_chf
         FROM transactions
         GROUP BY booking_date
         ORDER BY booking_date
@@ -89,7 +105,10 @@ def load_status_summary(settings: Settings | None = None) -> pd.DataFrame:
 
     return fetch_dataframe(
         """
-        SELECT status, COUNT(*) AS transaction_count, ROUND(SUM(amount_chf), 2) AS total_amount_chf
+        SELECT
+            status,
+            COUNT(*) AS transaction_count,
+            ROUND(SUM(amount_chf), 2) AS total_amount_chf
         FROM transactions
         GROUP BY status
         ORDER BY status
@@ -103,7 +122,10 @@ def load_channel_summary(settings: Settings | None = None) -> pd.DataFrame:
 
     return fetch_dataframe(
         """
-        SELECT channel, COUNT(*) AS transaction_count, ROUND(AVG(risk_score), 4) AS avg_risk_score
+        SELECT
+            channel,
+            COUNT(*) AS transaction_count,
+            ROUND(AVG(risk_score), 4) AS avg_risk_score
         FROM transactions
         GROUP BY channel
         ORDER BY transaction_count DESC
@@ -112,13 +134,24 @@ def load_channel_summary(settings: Settings | None = None) -> pd.DataFrame:
     )
 
 
-def load_suspicious_transactions(limit: int = 50, settings: Settings | None = None) -> pd.DataFrame:
+def load_suspicious_transactions(
+    limit: int = 50,
+    settings: Settings | None = None,
+) -> pd.DataFrame:
     """Load suspicious transactions sample."""
 
     return fetch_dataframe(
         f"""
-        SELECT transaction_id, account_id, event_timestamp, amount_chf, channel,
-               country, risk_score, status, is_suspicious
+        SELECT
+            transaction_id,
+            account_id,
+            event_timestamp,
+            amount_chf,
+            channel,
+            country,
+            risk_score,
+            status,
+            is_suspicious
         FROM transactions
         WHERE is_suspicious
         ORDER BY risk_score DESC, event_timestamp DESC

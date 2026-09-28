@@ -1,65 +1,88 @@
-# Incident Runbook — banking-dataops-monitoring
+# Incident Runbook — Banking DataOps Monitoring
 
-## Detection
+## Trigger conditions
 
-An incident can be detected through:
+An investigation is required when:
 
-- failed SQL quality check;
-- failed reconciliation query;
-- dashboard status change;
-- failed scheduled run;
-- failed CI test;
-- manual review.
+- a high-severity data-quality control fails;
+- source-to-target reconciliation returns `FAIL`;
+- the pipeline cannot ingest or query PostgreSQL;
+- the dashboard cannot read persisted control evidence;
+- CI detects a regression.
 
-## Triage steps
+## First question
 
-1. Identify failed control ID.
-2. Review failed row count.
-3. Check latest ingestion timestamp.
-4. Compare source-system reconciliation summary.
-5. Isolate affected booking date, source system or channel.
-6. Generate incident note with `make incident`.
-7. Decide: regenerate data, rerun ingestion, adjust validation or document known issue.
+Determine whether the failure is:
 
-## Investigation SQL
+1. **source quality** — the synthetic source itself violates a rule;
+2. **ingestion** — source data did not reach the target correctly;
+3. **target mutation** — target data changed after ingestion;
+4. **runtime** — PostgreSQL/container/process failure;
+5. **control logic** — the validation code or contract is wrong.
+
+## Reconciliation triage
+
+Inspect the latest result:
 
 ```sql
-SELECT * FROM quality_check_results ORDER BY executed_at DESC;
-SELECT * FROM reconciliation_results ORDER BY executed_at DESC LIMIT 20;
-SELECT * FROM transactions WHERE is_suspicious ORDER BY risk_score DESC LIMIT 20;
+SELECT *
+FROM reconciliation_results
+ORDER BY executed_at DESC
+LIMIT 5;
 ```
 
-## Root-cause categories
+Interpretation:
 
-| Category | Examples |
+| Signal | Likely direction |
 |---|---|
-| Data ingestion | missing file, malformed rows, source delay |
-| Data quality | nulls, duplicates, invalid amounts |
-| Reconciliation | missing source system, unexpected totals |
-| Runtime | container down, database unavailable |
-| Documentation | missing data dictionary or control description |
+| `count_delta < 0` | target is missing rows |
+| `count_delta > 0` | target contains unexpected rows |
+| `missing_in_target > 0` | source IDs did not reach target |
+| `unexpected_in_target > 0` | target contains IDs absent from source |
+| `amount_mismatch_count > 0` | shared IDs were materially altered |
+| `amount_delta != 0` | source/target financial totals diverge |
 
-## Resolution template
+## Quality triage
 
-```markdown
-# Incident: <title>
-
-## Impact
-What failed and which dataset/control was affected?
-
-## Symptoms
-Failed query, row count, dashboard status or log excerpt.
-
-## Root cause
-Technical explanation.
-
-## Resolution
-Steps taken.
-
-## Preventive action
-Additional control, test or documentation update.
+```sql
+SELECT *
+FROM quality_check_results
+ORDER BY executed_at DESC, control_id;
 ```
 
-## Public-safety note
+Then rerun the control query associated with the failed ID.
 
-Do not paste real client, bank, insurance, health, account or employer data into incident notes.
+## Recovery
+
+Because the environment is synthetic and disposable:
+
+```bash
+make ingest
+make quality
+make reconcile
+```
+
+If the source itself is invalid:
+
+```bash
+make generate
+make ingest
+make quality
+make reconcile
+```
+
+## Incident note
+
+Record:
+
+- failed control/reconciliation;
+- observed evidence;
+- source and target scope;
+- root cause;
+- corrective action;
+- preventive control or test;
+- final recovery evidence.
+
+## Boundary
+
+Do not copy real operational data into this repository or its incident notes.
