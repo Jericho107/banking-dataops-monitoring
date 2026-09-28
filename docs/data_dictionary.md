@@ -1,69 +1,87 @@
-# Data Dictionary — banking-dataops-monitoring
+# Data Dictionary — Banking DataOps Monitoring
 
 ## customers
 
 | Column | Type | Description | Quality rule |
 |---|---|---|---|
-| customer_id | TEXT | Synthetic customer identifier | Required, unique |
-| customer_segment | TEXT | Synthetic segment: retail, premium, sme | Required |
-| country | TEXT | Synthetic domicile country | Required |
-| created_at | TIMESTAMP | Synthetic creation timestamp | Required |
+| customer_id | TEXT | synthetic customer identifier | required, unique |
+| customer_segment | TEXT | retail, premium or sme | required |
+| country | TEXT | synthetic domicile country | required |
+| created_at | TIMESTAMP | synthetic creation timestamp | required |
 
 ## accounts
 
 | Column | Type | Description | Quality rule |
 |---|---|---|---|
-| account_id | TEXT | Synthetic account identifier | Required, unique |
-| customer_id | TEXT | Related synthetic customer | Required, must exist in customers |
-| account_type | TEXT | Synthetic account type | Required |
-| currency | TEXT | Account currency | Required |
-| opened_at | TIMESTAMP | Synthetic opening timestamp | Required |
+| account_id | TEXT | synthetic account identifier | required, unique |
+| customer_id | TEXT | related synthetic customer | required, FK to customers |
+| account_type | TEXT | current or savings | required |
+| currency | TEXT | account currency | required |
+| opened_at | TIMESTAMP | synthetic opening timestamp | required |
 
 ## transactions
 
 | Column | Type | Description | Quality rule |
 |---|---|---|---|
-| transaction_id | TEXT | Synthetic transaction identifier | Required, unique |
-| account_id | TEXT | Related synthetic account | Required, must exist in accounts |
-| source_system | TEXT | Synthetic source feed | Required |
-| event_timestamp | TIMESTAMP | Event timestamp | Required |
-| booking_date | DATE | Booking date | Required |
-| amount_chf | NUMERIC | Synthetic amount in CHF | Required, > 0, <= 1,000,000 |
-| currency | TEXT | Transaction currency | Required |
-| channel | TEXT | Source channel | Required |
-| merchant_category | TEXT | Synthetic merchant category | Required |
-| country | TEXT | Synthetic transaction country | Required |
-| risk_score | NUMERIC | Synthetic risk score | Required, 0-1 |
-| status | TEXT | Synthetic transaction status | Required |
-| is_suspicious | BOOLEAN | Synthetic anomaly flag | Required |
-| created_at | TIMESTAMP | Load timestamp | Required |
+| transaction_id | TEXT | synthetic transaction identifier | required, unique |
+| account_id | TEXT | related synthetic account | required, FK to accounts |
+| source_system | TEXT | synthetic source feed | required |
+| event_timestamp | TIMESTAMP | transaction event time | required |
+| booking_date | DATE | booking date | required |
+| amount_chf | NUMERIC(18,2) | synthetic CHF amount | > 0 and <= 1,000,000 |
+| currency | TEXT | transaction currency | required |
+| channel | TEXT | synthetic channel | required |
+| merchant_category | TEXT | synthetic merchant category | required |
+| country | TEXT | synthetic transaction country | required |
+| risk_score | NUMERIC(5,4) | synthetic risk score | 0–1 |
+| status | TEXT | posted, pending or rejected | controlled domain |
+| is_suspicious | BOOLEAN | synthetic anomaly flag | required |
+| created_at | TIMESTAMP | generated load timestamp | required |
 
 ## quality_check_results
 
 | Column | Type | Description |
 |---|---|---|
-| check_id | TEXT | Control identifier |
-| control_id | TEXT | Control ID |
-| check_name | TEXT | Control name |
+| check_id | TEXT | persisted control-result identifier |
+| control_id | TEXT | documented control ID |
+| check_name | TEXT | control name |
 | status | TEXT | PASS, WARN or FAIL |
-| failed_rows | INTEGER | Failed row count |
+| failed_rows | INTEGER | number of failing rows |
 | severity | TEXT | high, medium or low |
-| executed_at | TIMESTAMP | Execution timestamp |
+| executed_at | TIMESTAMP | execution timestamp |
 
 ## reconciliation_results
 
 | Column | Type | Description |
 |---|---|---|
-| reconciliation_id | TEXT | Synthetic result identifier |
-| reconciliation_name | TEXT | Reconciliation type |
-| source_count | INTEGER | Source count |
-| target_count | INTEGER | Target count |
-| count_delta | INTEGER | Count difference |
-| source_total | NUMERIC | Source amount |
-| target_total | NUMERIC | Target amount |
-| amount_delta | NUMERIC | Amount difference |
-| executed_at | TIMESTAMP | Execution timestamp |
+| reconciliation_id | TEXT | unique reconciliation-run identifier |
+| reconciliation_name | TEXT | reconciliation contract name |
+| source_count | INTEGER | source CSV row count |
+| target_count | INTEGER | PostgreSQL target row count |
+| count_delta | INTEGER | target count minus source count |
+| source_total | NUMERIC(18,2) | source amount total |
+| target_total | NUMERIC(18,2) | target amount total |
+| amount_delta | NUMERIC(18,2) | target total minus source total |
+| missing_in_target | INTEGER | source IDs absent from target |
+| unexpected_in_target | INTEGER | target IDs absent from source |
+| amount_mismatch_count | INTEGER | shared IDs with different amounts |
+| source_duplicate_ids | INTEGER | duplicated IDs detected in source snapshot |
+| target_duplicate_ids | INTEGER | duplicated IDs detected in target snapshot |
+| status | TEXT | PASS or FAIL |
+| executed_at | TIMESTAMP | execution timestamp |
 
-## Public-safety note
+## incident_reports
 
-All data is synthetic. No real banking, insurance, health, client, employer or private data should be stored here.
+| Column | Type | Description |
+|---|---|---|
+| incident_id | TEXT | generated incident identifier |
+| title | TEXT | incident title |
+| severity | TEXT | severity classification |
+| status | TEXT | incident lifecycle status |
+| failed_control | TEXT | related control ID |
+| summary | TEXT | synthetic incident summary |
+| created_at | TIMESTAMP | creation timestamp |
+
+## Data boundary
+
+Every dataset in this repository is synthetic. Reproducing the project does not require real banking, customer, employer or client information.
