@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import argparse
 import csv
+import random
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-import random
 
 
 @dataclass(frozen=True)
