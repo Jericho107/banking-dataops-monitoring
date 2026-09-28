@@ -4,9 +4,36 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+env:
+  BANKING_DATAOPS_DB_HOST: localhost
+  BANKING_DATAOPS_DB_PORT: "5432"
+  BANKING_DATAOPS_DB_NAME: banking_dataops
+  BANKING_DATAOPS_DB_USER: dataops
+  BANKING_DATAOPS_DB_PASSWORD: dataops_local_only
+  BANKING_DATAOPS_DATA_DIR: data
+  BANKING_DATAOPS_OUTPUT_DIR: output
+
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dataops
+          POSTGRES_PASSWORD: dataops_local_only
+          POSTGRES_DB: banking_dataops
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dataops -d banking_dataops"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
@@ -16,14 +43,74 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install dependencies
+      - name: Install
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Compile
+        run: python -m compileall -q src tests dashboard
+
       - name: Lint
         run: ruff check .
 
-      - name: Test
-        run: pytest
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Generate deterministic source data
+        run: |
+          python -m banking_dataops.generate_synthetic_data             --output-dir data             --customers 25             --transactions 300             --seed 42
+
+      - name: Ingest source into PostgreSQL
+        run: python -m banking_dataops.ingest
+
+      - name: Run data-quality controls
+        run: python -m banking_dataops.quality_checks
+
+      - name: Prove clean source-to-target reconciliation
+        run: python -m banking_dataops.reconciliation
+
+      - name: Inject a silent target mutation
+        run: |
+          python - <<'PY'
+          from banking_dataops.db import execute_query
+
+          execute_query(
+              """
+              UPDATE transactions
+              SET amount_chf = amount_chf + 1
+              WHERE transaction_id = (
+                  SELECT MIN(transaction_id)
+                  FROM transactions
+              )
+              """
+          )
+          PY
+
+      - name: Prove reconciliation catches the mutation
+        shell: bash
+        run: |
+          if python -m banking_dataops.reconciliation; then
+            echo "Expected reconciliation to fail after target mutation."
+            exit 1
+          fi
+          echo "Mutation detected as expected."
+
+      - name: Restore source state and prove recovery
+        run: |
+          python -m banking_dataops.ingest
+          python -m banking_dataops.quality_checks
+          python -m banking_dataops.reconciliation
+
+      - name: Verify persisted control status
+        run: |
+          python - <<'PY'
+          from banking_dataops.monitoring import load_reconciliation_summary
+
+          result = load_reconciliation_summary()
+          assert not result.empty
+          assert result.iloc[0]["status"] == "PASS"
+          print(result.head(3).to_string(index=False))
+          PY
