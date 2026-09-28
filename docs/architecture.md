@@ -81,6 +81,10 @@ A reconciliation is `PASS` only when:
 
 Any failed condition produces `FAIL`.
 
+### Current reconciliation boundary
+
+The contract intentionally validates transaction identity and `amount_chf`. It does not currently compare every non-financial attribute such as channel, status or merchant category. A production extension could add canonical row hashes or field-level comparison for those attributes.
+
 The CLI exits non-zero on failure, which makes the reconciliation enforceable by CI or an orchestrator rather than merely descriptive.
 
 ## Quality-control layer
