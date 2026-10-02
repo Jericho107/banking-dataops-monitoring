@@ -4,18 +4,31 @@ This document maps the repository's public claims to inspectable evidence and a 
 
 | Claim | Primary evidence | Reverse test / falsification path |
 |---|---|---|
-| The source is reproducible | `generate_synthetic_data.py` with explicit seed + anchor | run twice with the same seed + anchor and require byte-identical CSV files |
+| The source is reproducible | `generate_synthetic_data.py` with explicit seed + anchor | run twice with the same seed + anchor and require equivalent CSV files |
 | PostgreSQL is a distinct target state | `ingest.py` loads CSV files through PostgreSQL COPY | alter target data after ingestion without touching the source file |
-| Data-quality controls execute | `quality_checks.py` + `sql/02_data_quality_checks.sql` | insert/alter rows that violate a documented rule |
-| Reconciliation compares source and target | `load_source_snapshot` vs `load_target_snapshot` | mutate target amount while keeping source CSV unchanged |
-| Missing records are detected | transaction-ID set comparison | delete one target transaction and run reconciliation |
-| Unexpected records are detected | transaction-ID set comparison | insert an additional target transaction and run reconciliation |
-| Silent amount mutation is detected | per-ID amount comparison | add CHF 1.00 to one existing target transaction |
-| Duplicate source IDs are detectable | source snapshot duplicate detection | duplicate one source row before ingestion |
-| Reconciliation can gate automation | CLI exits non-zero on FAIL | CI expects the mutated target run to fail |
-| Clean state can be recovered | seeded source + repeatable ingestion | reload source and require PASS after failure injection |
-| Software checks are automated | `.github/workflows/ci.yml` | push/PR triggers compile, Ruff, pytest and pipeline validation |
-| Public data are safe to inspect | synthetic generator + repository boundary docs | no real client or banking data are required to reproduce the project |
+| Data-quality controls execute | `quality_checks.py` + SQL controls | insert/alter rows that violate a documented rule |
+| Reconciliation compares source and target | full source CSV vs full PostgreSQL transaction rows | mutate any governed target field while source remains unchanged |
+| Missing records are detected | transaction-ID set comparison | delete one target transaction |
+| Unexpected records are detected | transaction-ID set comparison | insert an additional target transaction |
+| Silent amount mutation is detected | per-ID amount comparison + row hash | add CHF 1.00 to one existing target transaction |
+| Silent non-financial mutation is detected | SHA-256 of canonical full transaction row | change `channel`, `status`, `country`, risk or another governed field without changing amount |
+| Duplicate source IDs are detectable | source snapshot duplicate detection | duplicate one source row |
+| Reconciliation can gate automation | CLI exits non-zero on FAIL | CI requires both mutation scenarios to fail |
+| Clean state can be recovered | seeded source + repeatable ingestion | reload source after each corruption and require PASS |
+| Software checks are automated | `.github/workflows/ci.yml` | push/PR runs compile, Ruff, pytest and full reverse tests |
+| Public data are safe to inspect | synthetic generator + repository boundary docs | no real client or banking data are required |
+
+## Canonical row rule
+
+Every governed transaction field is normalized before hashing:
+
+- monetary values to cents;
+- risk score to four decimals;
+- dates/timestamps to deterministic ISO representation;
+- booleans to canonical true/false text;
+- text values stripped but otherwise preserved.
+
+This avoids false mismatches caused by representation differences while still detecting semantic field drift.
 
 ## Reading rule
 
