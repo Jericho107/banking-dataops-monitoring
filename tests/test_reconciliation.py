@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -58,12 +58,12 @@ def test_csv_and_postgresql_type_representations_hash_equally() -> None:
     target_record = dict(source_record)
     target_record.update(
         {
-            "event_timestamp": datetime(2026, 9, 1, 10, 0, 0),
+            "event_timestamp": datetime(2026, 9, 1, 10, 0, 0, tzinfo=UTC).replace(tzinfo=None),
             "booking_date": date(2026, 9, 1),
             "amount_chf": Decimal("10.00"),
             "risk_score": Decimal("0.1200"),
             "is_suspicious": False,
-            "created_at": datetime(2026, 10, 1, 0, 0, 0),
+            "created_at": datetime(2026, 10, 1, 0, 0, 0, tzinfo=UTC).replace(tzinfo=None),
         }
     )
 
