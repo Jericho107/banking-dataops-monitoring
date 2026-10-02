@@ -26,6 +26,7 @@ env:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -68,7 +69,12 @@ jobs:
 
       - name: Generate seeded source data
         run: |
-          python -m banking_dataops.generate_synthetic_data             --output-dir data             --customers 25             --transactions 300             --seed 42
+          python -m banking_dataops.generate_synthetic_data \
+            --output-dir data \
+            --customers 25 \
+            --transactions 300 \
+            --seed 42 \
+            --anchor 2026-09-01T00:00:00+00:00
 
       - name: Ingest source into PostgreSQL
         run: python -m banking_dataops.ingest
@@ -76,10 +82,42 @@ jobs:
       - name: Run data-quality controls
         run: python -m banking_dataops.quality_checks
 
-      - name: Prove clean source-to-target reconciliation
+      - name: Prove clean full-row source-to-target reconciliation
         run: python -m banking_dataops.reconciliation
 
-      - name: Inject a silent target mutation
+      - name: Inject silent non-financial target mutation
+        run: |
+          python - <<'PY'
+          from banking_dataops.db import execute_query
+
+          execute_query(
+              """
+              UPDATE transactions
+              SET channel = CASE WHEN channel = 'web' THEN 'branch' ELSE 'web' END
+              WHERE transaction_id = (
+                  SELECT MIN(transaction_id)
+                  FROM transactions
+              )
+              """
+          )
+          PY
+
+      - name: Prove canonical row reconciliation catches non-financial mutation
+        shell: bash
+        run: |
+          if python -m banking_dataops.reconciliation; then
+            echo "Expected full-row reconciliation to fail after channel mutation."
+            exit 1
+          fi
+          echo "Non-financial mutation detected as expected."
+
+      - name: Restore source state
+        run: |
+          python -m banking_dataops.ingest
+          python -m banking_dataops.quality_checks
+          python -m banking_dataops.reconciliation
+
+      - name: Inject silent amount mutation
         run: |
           python - <<'PY'
           from banking_dataops.db import execute_query
@@ -96,16 +134,16 @@ jobs:
           )
           PY
 
-      - name: Prove reconciliation catches the mutation
+      - name: Prove reconciliation catches amount mutation
         shell: bash
         run: |
           if python -m banking_dataops.reconciliation; then
-            echo "Expected reconciliation to fail after target mutation."
+            echo "Expected reconciliation to fail after amount mutation."
             exit 1
           fi
-          echo "Mutation detected as expected."
+          echo "Amount mutation detected as expected."
 
-      - name: Restore source state and prove recovery
+      - name: Restore source state and prove final recovery
         run: |
           python -m banking_dataops.ingest
           python -m banking_dataops.quality_checks
@@ -119,5 +157,6 @@ jobs:
           result = load_reconciliation_summary()
           assert not result.empty
           assert result.iloc[0]["status"] == "PASS"
+          assert "row_mismatch_count" in result.columns
           print(result.head(3).to_string(index=False))
           PY
