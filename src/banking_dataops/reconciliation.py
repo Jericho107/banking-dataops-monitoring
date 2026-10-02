@@ -174,7 +174,7 @@ def _canonical_value(field: str, value: object) -> str:
     if field in {"event_timestamp", "created_at"}:
         timestamp = pd.Timestamp(value)
         if timestamp.tzinfo is not None:
-            timestamp = timestamp.tz_convert("UTC")
+            timestamp = timestamp.tz_convert("UTC").tz_localize(None)
         return timestamp.isoformat()
     if field == "booking_date":
         if isinstance(value, (date, datetime)):
