@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -50,6 +51,26 @@ def test_matching_snapshots_pass() -> None:
     assert result.amount_mismatch_count == 0
     assert result.row_mismatch_count == 0
 
+
+
+def test_csv_and_postgresql_type_representations_hash_equally() -> None:
+    source_record = _record("TX-1", "10.00", "web")
+    target_record = dict(source_record)
+    target_record.update(
+        {
+            "event_timestamp": datetime(2026, 9, 1, 10, 0, 0),
+            "booking_date": date(2026, 9, 1),
+            "amount_chf": Decimal("10.00"),
+            "risk_score": Decimal("0.1200"),
+            "is_suspicious": False,
+            "created_at": datetime(2026, 10, 1, 0, 0, 0),
+        }
+    )
+
+    result = compare_snapshots(_snapshot([source_record]), _snapshot([target_record]))
+
+    assert result.status == "PASS"
+    assert result.row_mismatch_count == 0
 
 def test_missing_target_transaction_fails() -> None:
     source = _snapshot([_record("TX-1"), _record("TX-2")])
