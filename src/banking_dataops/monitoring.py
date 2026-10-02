@@ -72,6 +72,7 @@ def load_reconciliation_summary(settings: Settings | None = None) -> pd.DataFram
             missing_in_target,
             unexpected_in_target,
             amount_mismatch_count,
+            row_mismatch_count,
             source_duplicate_ids,
             target_duplicate_ids,
             executed_at
