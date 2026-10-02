@@ -64,7 +64,7 @@ SOURCE ↔ TARGET RECONCILIATION
 
 The important part is not that a reconciliation function exists.
 
-The repository deliberately **mutates one target amount inside CI and requires the reconciliation command to fail**. The target is then restored and the same control must return to PASS.
+The repository deliberately runs **two independent target mutations inside CI**: one changes a non-financial field while leaving totals unchanged, and another changes an amount. Both must fail reconciliation. The target is restored after each failure and the clean state must return to PASS.
 
 That is the reverse test for the central claim.
 
@@ -124,6 +124,7 @@ A reconciliation passes only when all of the following are true:
 - no source transaction is missing from the target;
 - no unexpected transaction exists in the target;
 - no shared transaction ID has a different amount;
+- no shared transaction ID has any silent field-level drift after canonical normalization;
 - no duplicate transaction ID exists in either snapshot.
 
 The CLI fails closed:
@@ -250,16 +251,12 @@ What is intentionally demonstrated:
 - ingestion;
 - SQL-backed controls;
 - Python orchestration;
-- transaction-level source/target reconciliation;
+- canonical full-row source/target reconciliation;
 - failure detection;
 - monitoring;
 - testing;
 - CI;
 - operational documentation.
-
-Known technical limitation:
-
-- reconciliation currently validates transaction identity and `amount_chf`, not byte-for-byte equality of every transaction attribute; a production extension could compare canonical row hashes or field-level contracts.
 
 What is intentionally not claimed:
 
