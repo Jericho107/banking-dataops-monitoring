@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
@@ -16,6 +18,24 @@ from banking_dataops.config import Settings, load_settings
 from banking_dataops.db import connect, fetch_dataframe
 
 CENT = Decimal("0.01")
+RISK_PRECISION = Decimal("0.0001")
+
+TRANSACTION_FIELDS = (
+    "transaction_id",
+    "account_id",
+    "source_system",
+    "event_timestamp",
+    "booking_date",
+    "amount_chf",
+    "currency",
+    "channel",
+    "merchant_category",
+    "country",
+    "risk_score",
+    "status",
+    "is_suspicious",
+    "created_at",
+)
 
 
 @dataclass(frozen=True)
@@ -27,6 +47,7 @@ class ReconciliationSnapshot:
     transaction_ids: frozenset[str]
     duplicate_ids: frozenset[str]
     amount_by_id: dict[str, Decimal]
+    row_hash_by_id: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -43,6 +64,7 @@ class ReconciliationResult:
     missing_in_target: int
     unexpected_in_target: int
     amount_mismatch_count: int
+    row_mismatch_count: int
     source_duplicate_ids: int
     target_duplicate_ids: int
     status: str
@@ -113,7 +135,21 @@ ORDER BY is_suspicious DESC
 """
 
 TARGET_TRANSACTION_QUERY = """
-SELECT transaction_id, amount_chf
+SELECT
+    transaction_id,
+    account_id,
+    source_system,
+    event_timestamp,
+    booking_date,
+    amount_chf,
+    currency,
+    channel,
+    merchant_category,
+    country,
+    risk_score,
+    status,
+    is_suspicious,
+    created_at
 FROM transactions
 ORDER BY transaction_id
 """
@@ -125,49 +161,91 @@ def _amount(value: object) -> Decimal:
     return Decimal(str(value)).quantize(CENT)
 
 
-def build_snapshot(records: list[tuple[str, object]]) -> ReconciliationSnapshot:
-    """Build deterministic control totals from transaction ID / amount records."""
+def _canonical_value(field: str, value: object) -> str:
+    """Normalize a source/target field so semantically equal values hash identically."""
 
-    normalized = [(str(transaction_id), _amount(amount)) for transaction_id, amount in records]
-    identifiers = [transaction_id for transaction_id, _ in normalized]
+    if value is None:
+        return ""
+
+    if field == "amount_chf":
+        return format(Decimal(str(value)).quantize(CENT), "f")
+    if field == "risk_score":
+        return format(Decimal(str(value)).quantize(RISK_PRECISION), "f")
+    if field in {"event_timestamp", "created_at"}:
+        timestamp = pd.Timestamp(value)
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.tz_convert("UTC")
+        return timestamp.isoformat()
+    if field == "booking_date":
+        if isinstance(value, (date, datetime)):
+            return value.date().isoformat() if isinstance(value, datetime) else value.isoformat()
+        return pd.Timestamp(value).date().isoformat()
+    if field == "is_suspicious":
+        if isinstance(value, str):
+            return "true" if value.strip().lower() in {"true", "t", "1", "yes"} else "false"
+        return "true" if bool(value) else "false"
+
+    return str(value).strip()
+
+
+def canonical_row(record: dict[str, object]) -> str:
+    """Return one deterministic canonical representation of a transaction row."""
+
+    missing = [field for field in TRANSACTION_FIELDS if field not in record]
+    if missing:
+        raise ValueError(f"Transaction record missing fields: {missing}")
+    return "|".join(_canonical_value(field, record[field]) for field in TRANSACTION_FIELDS)
+
+
+def build_snapshot(records: list[dict[str, object]]) -> ReconciliationSnapshot:
+    """Build deterministic aggregate and full-row evidence from transaction records."""
+
+    identifiers = [str(record["transaction_id"]) for record in records]
     counts = Counter(identifiers)
     duplicates = frozenset(
         transaction_id for transaction_id, count in counts.items() if count > 1
     )
 
     amount_by_id: dict[str, Decimal] = {}
-    for transaction_id, amount in normalized:
-        amount_by_id[transaction_id] = amount
+    row_hash_by_id: dict[str, str] = {}
+    for record in records:
+        transaction_id = str(record["transaction_id"])
+        amount_by_id[transaction_id] = _amount(record["amount_chf"])
+        row_hash_by_id[transaction_id] = hashlib.sha256(
+            canonical_row(record).encode("utf-8")
+        ).hexdigest()
 
     return ReconciliationSnapshot(
-        row_count=len(normalized),
-        total_amount_chf=sum((amount for _, amount in normalized), Decimal("0.00")),
+        row_count=len(records),
+        total_amount_chf=sum(
+            (_amount(record["amount_chf"]) for record in records),
+            Decimal("0.00"),
+        ),
         transaction_ids=frozenset(identifiers),
         duplicate_ids=duplicates,
         amount_by_id=amount_by_id,
+        row_hash_by_id=row_hash_by_id,
     )
 
 
 def load_source_snapshot(csv_path: Path) -> ReconciliationSnapshot:
-    """Read source transaction controls directly from the generated CSV."""
+    """Read full transaction controls directly from the generated CSV."""
 
     if not csv_path.exists():
         raise FileNotFoundError(f"Missing source transaction file: {csv_path}")
 
-    records: list[tuple[str, object]] = []
     with csv_path.open("r", encoding="utf-8", newline="") as handle:
-        for row in csv.DictReader(handle):
-            records.append((row["transaction_id"], row["amount_chf"]))
+        records = [dict(row) for row in csv.DictReader(handle)]
 
     return build_snapshot(records)
 
 
 def load_target_snapshot(settings: Settings | None = None) -> ReconciliationSnapshot:
-    """Read target transaction controls from PostgreSQL."""
+    """Read full transaction controls from PostgreSQL."""
 
     frame = fetch_dataframe(TARGET_TRANSACTION_QUERY, settings=settings)
     records = [
-        (str(row["transaction_id"]), row["amount_chf"])
+        {field: row[field] for field in TRANSACTION_FIELDS}
         for _, row in frame.iterrows()
     ]
     return build_snapshot(records)
@@ -177,13 +255,17 @@ def compare_snapshots(
     source: ReconciliationSnapshot,
     target: ReconciliationSnapshot,
 ) -> ReconciliationResult:
-    """Compare source and target at aggregate and transaction-ID level."""
+    """Compare source and target at aggregate, ID, amount and canonical-row level."""
 
     missing = source.transaction_ids - target.transaction_ids
     unexpected = target.transaction_ids - source.transaction_ids
     shared = source.transaction_ids & target.transaction_ids
     amount_mismatches = sum(
         source.amount_by_id[transaction_id] != target.amount_by_id[transaction_id]
+        for transaction_id in shared
+    )
+    row_mismatches = sum(
+        source.row_hash_by_id[transaction_id] != target.row_hash_by_id[transaction_id]
         for transaction_id in shared
     )
 
@@ -197,13 +279,14 @@ def compare_snapshots(
             not missing,
             not unexpected,
             amount_mismatches == 0,
+            row_mismatches == 0,
             not source.duplicate_ids,
             not target.duplicate_ids,
         ]
     )
 
     return ReconciliationResult(
-        reconciliation_name="transactions_csv_to_postgresql",
+        reconciliation_name="transactions_csv_to_postgresql_full_row",
         source_count=source.row_count,
         target_count=target.row_count,
         count_delta=count_delta,
@@ -213,6 +296,7 @@ def compare_snapshots(
         missing_in_target=len(missing),
         unexpected_in_target=len(unexpected),
         amount_mismatch_count=amount_mismatches,
+        row_mismatch_count=row_mismatches,
         source_duplicate_ids=len(source.duplicate_ids),
         target_duplicate_ids=len(target.duplicate_ids),
         status="PASS" if passed else "FAIL",
@@ -256,11 +340,12 @@ def persist_reconciliation(
                     missing_in_target,
                     unexpected_in_target,
                     amount_mismatch_count,
+                    row_mismatch_count,
                     source_duplicate_ids,
                     target_duplicate_ids,
                     status
                 )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 f"REC-{uuid4().hex[:12].upper()}",
@@ -274,6 +359,7 @@ def persist_reconciliation(
                 result.missing_in_target,
                 result.unexpected_in_target,
                 result.amount_mismatch_count,
+                result.row_mismatch_count,
                 result.source_duplicate_ids,
                 result.target_duplicate_ids,
                 result.status,
